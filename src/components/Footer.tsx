@@ -1,12 +1,12 @@
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import makramsLogo from "../assets/makrams.png";
 
 const footerLinks = {
-  Products: ["Base Cabinets", "Wall Cabinets", "Tall Cabinets", "Bathroom Vanities", "Kitchen Islands", "Corner Units"],
-  Company: ["About Us", "Our Process", "Become a Dealer", "Careers", "Press & Media"],
+  Products: ["Base Cabinets", "Wall Cabinets", "Tall Cabinets", "Corner Units"],
+  Company: ["About Us", "Our Process", "Become a Dealer", "Careers"],
   Support: ["Contact Us", "Request a Quote", "Order Tracking", "FAQs", "Warranty Policy"],
-  Resources: ["Installation Guides", "Cabinet Care Tips", "Design Inspiration", "Blog", "Product Catalog"],
+  // Resources: ["Installation Guides", "Cabinet Care Tips", "Design Inspiration", "Blog", "Product Catalog"],
 };
-
 export function Footer() {
   return (
     <footer className="bg-[#0a0f1e] text-white">
@@ -17,15 +17,10 @@ export function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-5">
               <div className="w-8 h-8 bg-[#22c55e] rounded-md flex items-center justify-center">
-                <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
-                  <rect x="2" y="2" width="10" height="10" rx="1.5" fill="white" />
-                  <rect x="14" y="2" width="16" height="8" rx="1.5" fill="white" opacity="0.7" />
-                  <rect x="2" y="14" width="14" height="16" rx="1.5" fill="white" opacity="0.5" />
-                  <rect x="18" y="12" width="12" height="18" rx="1.5" fill="white" opacity="0.3" />
-                </svg>
+                <img src={makramsLogo} alt="Makrams Logo" className="w-4 h-4" />
               </div>
               <span style={{ fontSize: "1.375rem", fontWeight: 700 }}>
-                Elite Kitchen <span className="text-[#22c55e]">Design</span>
+                <span className="text-[#22c55e]">Makrams</span>
               </span>
             </div>
             <p className="text-white/50 mb-6" style={{ fontSize: "0.9375rem", lineHeight: 1.7 }}>

@@ -1,6 +1,7 @@
 import { ArrowRight, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
 
-const heroImage = "https://images.unsplash.com/photo-1560185127-1902ccdc5094?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB3aGl0ZSUyMGtpdGNoZW4lMjBjYWJpbmV0cyUyMGludGVyaW9yfGVufDF8fHx8MTc3MjU3OTk3M3ww&ixlib=rb-4.1.0&q=80&w=1080";
+import heroImage from "../assets/hero.jpeg";
 
 export function Hero() {
   return (
@@ -40,14 +41,18 @@ export function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-4">
-            <a
-              href="#"
+
+
+            <Link
+              to="/shop-standards"
               className="flex items-center gap-2 px-7 py-3.5 bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-md transition-all duration-200 group shadow-lg shadow-green-900/30"
               style={{ fontWeight: 600, fontSize: "0.9375rem" }}
             >
               Start Your Order
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </a>
+            </Link>
+
+            
             <a
               href="#"
               className="flex items-center gap-2 px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-md transition-all duration-200 backdrop-blur-sm"
@@ -61,7 +66,7 @@ export function Hero() {
           <div className="flex flex-wrap gap-8 mt-14">
             {[
               { value: "500+", label: "Projects Completed" },
-              { value: "15+", label: "Years of Experience" },
+              { value: "8+", label: "Years of Experience" },
               { value: "100%", label: "Custom Built" },
             ].map((stat) => (
               <div key={stat.label}>

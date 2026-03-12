@@ -1,10 +1,22 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { createRoot } from "react-dom/client"
+import "./index.css"
+import App from "./App.tsx"
+import { CartProvider } from "./context/CartContext"
+import { AuthProvider } from "react-oidc-context"
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+const cognitoAuthConfig = {
+  authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_iR3Zsdplk",
+  client_id: "454b6vnvplepl6dma4dkf24245",
+  redirect_uri: "http://localhost:5173/",
+  post_logout_redirect_uri: "http://localhost:5173/", // must match Allowed sign-out URLs
+  response_type: "code",
+  scope: "openid email phone",
+}
+
+createRoot(document.getElementById("root")!).render(
+  <AuthProvider {...cognitoAuthConfig}>
+    <CartProvider>
+      <App />
+    </CartProvider>
+  </AuthProvider>
 )
