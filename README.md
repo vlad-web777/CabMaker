@@ -1,5 +1,9 @@
 # React + TypeScript + Vite
-
+npm install react@^19.2.0 react-dom@^19.2.0 react-router-dom@^7.13.1 \
+tailwindcss@^4.2.1 postcss@^8.5.8 @tailwindcss/postcss@^4.2.1 @tailwindcss/vite@^4.2.1 \
+aws-amplify@^6.16.3 @aws-amplify/auth@^6.19.1 \
+@react-three/fiber@^9.5.0 @react-three/drei@^10.7.7 three@^0.183.2 \
+lucide-react@^0.577.0 oidc-client-ts@^3.4.1 react-oidc-context@^3.3.0
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
