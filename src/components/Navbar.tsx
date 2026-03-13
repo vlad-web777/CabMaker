@@ -42,7 +42,7 @@ export function Navbar() {
 const callApi = async () => {
   const res = await fetch("https://d13ttutzue.execute-api.us-east-1.amazonaws.com/default/helloTest")
   const data = await res.json()
-  console.log(data)
+  alert(data)
 }
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white">

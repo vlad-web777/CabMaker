@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@aws-amplify/auth": "^6.19.1",
+    "@aws-sdk/client-dynamodb": "^3.1008.0",
+    "@aws-sdk/lib-dynamodb": "^3.1008.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@tailwindcss/postcss": "^4.2.1",

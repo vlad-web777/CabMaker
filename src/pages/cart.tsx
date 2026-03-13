@@ -1,5 +1,6 @@
 import { useCart } from "../context/CartContext"
 import { cabinetConfig } from "../models/cabinetConfig"
+import { generateKcdXml } from "../utils/generateKcdXml"
 
 export default function CartPage() {
 
@@ -18,6 +19,23 @@ export default function CartPage() {
     return null
   }
 
+  const handleSubmitQuote = () => {
+
+    const xml = generateKcdXml(cart)
+
+    console.log(xml)
+
+    const blob = new Blob([xml], { type: "application/xml" })
+
+    const link = document.createElement("a")
+
+    link.href = URL.createObjectURL(blob)
+
+    link.download = "kcd-job.xml"
+
+    link.click()
+  }
+
   return (
     <div className="max-w-5xl mx-auto mt-24 px-6">
 
@@ -27,20 +45,11 @@ export default function CartPage() {
 
       {cart.length === 0 ? (
 
-        /* EMPTY CART */
-
         <div className="flex flex-col items-center justify-center py-32 gap-4">
 
           <p className="text-xl text-gray-500">
             Cart is Empty
           </p>
-
-          <a
-            href="/"
-            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            Browse Cabinets
-          </a>
 
         </div>
 
@@ -61,7 +70,6 @@ export default function CartPage() {
                   className="border rounded-lg p-6 flex gap-6"
                 >
 
-                  {/* Image */}
                   <img
                     src={item.image}
                     className="w-24 h-24 object-contain"
@@ -69,12 +77,9 @@ export default function CartPage() {
 
                   <div className="flex-1">
 
-                    {/* Cabinet Name */}
                     <h2 className="font-semibold text-lg mb-3">
                       {item.name}
                     </h2>
-
-                    {/* OPTIONS */}
 
                     <div className="grid grid-cols-3 gap-4 mb-4">
 
@@ -88,9 +93,10 @@ export default function CartPage() {
 
                             <label className="text-sm text-gray-600">
                               {opt.label}
+                              {opt.required && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
                             </label>
-
-                            {/* SELECT */}
 
                             {opt.type === "select" && (
 
@@ -106,10 +112,7 @@ export default function CartPage() {
                               >
 
                                 {opt.values?.map((v) => (
-                                  <option
-                                    key={v}
-                                    value={v}
-                                  >
+                                  <option key={v} value={v}>
                                     {v}
                                   </option>
                                 ))}
@@ -117,8 +120,6 @@ export default function CartPage() {
                               </select>
 
                             )}
-
-                            {/* TEXT INPUT */}
 
                             {opt.type === "input" && (
 
@@ -135,8 +136,6 @@ export default function CartPage() {
                               />
 
                             )}
-
-                            {/* NUMBER INPUT */}
 
                             {opt.type === "number" && (
 
@@ -160,8 +159,6 @@ export default function CartPage() {
                       })}
 
                     </div>
-
-                    {/* Quantity + Remove */}
 
                     <div className="flex items-center gap-6">
 
@@ -215,14 +212,13 @@ export default function CartPage() {
 
           </div>
 
-          {/* SUBMIT QUOTE BUTTON */}
-
           <div className="flex justify-end mt-10">
 
             <button
+              onClick={handleSubmitQuote}
               className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white rounded-md text-lg font-semibold"
             >
-              Submit Quote
+              Generate XML
             </button>
 
           </div>
