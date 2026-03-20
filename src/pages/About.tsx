@@ -17,7 +17,7 @@ export default function About() {
 
       {/* Hero Section */}
       <HeroSection
-        title="About Makrams Cabinets"
+        title="About Kitchen Cabinet Design"
         subtitle="Quality cabinetry crafted with precision and care"
         imageUrl="/images/about-hero.jpg"
       />
@@ -25,7 +25,7 @@ export default function About() {
       {/* Story Section */}
       <ContentSection
         title="Our Story"
-        content="We started Makrams with a vision to bring high-quality, customizable cabinetry to every home. Our team focuses on precision, design, and customer satisfaction. Replace this text with your real story."
+        content="We started Kitchen Cabinet Design with a vision to bring high-quality, customizable cabinetry to every home. Our team focuses on precision, design, and customer satisfaction. Replace this text with your real story."
         imageUrl="/images/about-story.jpg"
         imageLeft={true}
       />

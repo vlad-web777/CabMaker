@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import heroImage from "../assets/hero.jpeg";
+import heroImage from "../assets/osmani.jpeg";
 
 export function Hero() {
   return (

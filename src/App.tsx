@@ -17,6 +17,10 @@ import Contact from "./pages/Contact";
 import About from "./pages/About";
 import Work from "./pages/OurWork";
 import Account from "./pages/Account";
+import Cabinetry from "./pages/Cabinetry";
+import ProtectedRoute from "./components/ProtectedRoute";
+import APIErrorPage from "./pages/APIErrorPage";
+
 // import CabinetSide from "./components/CabinetSide";
 
 function HomePage() {
@@ -30,6 +34,7 @@ function HomePage() {
       {/* <GalleryStrip /> */}
       {/* <Testimonials /> */}
       {/* <CTABanner /> */}
+      {/* <Cabinetry/> */}
     </>
   );
 }
@@ -44,13 +49,23 @@ export default function App() {
         <main className="pt-20">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/shop-standards" element={<ShopStandards />} />
+            <Route
+              path="/shop-standards"
+              element={
+                //Vlad 3-18-2026:  Wrap the ShopStandards component with ProtectedRoute so only logged-in users can access it
+                <ProtectedRoute> 
+                  <ShopStandards />
+                //</ProtectedRoute>
+              }
+            />
             <Route path="/builder" element={<CabinetBuilder />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About/>} />
             <Route path="/work" element={<Work/>} />
             <Route path="/account" element={<Account />} />
+            <Route path="/Cabinetry" element={<Cabinetry />} />
+            <Route path="/APIErrorPage" element={<APIErrorPage />} />
           </Routes>
         </main>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "react-oidc-context";
 
 type CustomerSection =
@@ -7,7 +7,8 @@ type CustomerSection =
   | "addresses"
   | "account"
   | "gift-cards"
-  | "saved-carts";
+  | "saved-carts"
+  | "saved-presets";
 
 type AdminSection =
   | "dashboard"
@@ -16,7 +17,8 @@ type AdminSection =
   | "tickets"
   | "files"
   | "analytics"
-  | "settings";
+  | "settings"
+  | "presets";
 
 type CustomerRecord = {
   userId: string;
@@ -30,75 +32,46 @@ type CustomerRecord = {
   ticketsOpen: number;
 };
 
-const mockCustomers: CustomerRecord[] = [
-  {
-    userId: "usr_001",
-    name: "John Smith",
-    companyName: "Smith Cabinets",
-    email: "john@smithcabinets.com",
-    phone: "(617) 555-1200",
-    address: "12 Main St, Boston, MA",
-    role: "customer",
-    ordersCount: 4,
-    ticketsOpen: 1,
-  },
-  {
-    userId: "usr_002",
-    name: "Sarah Brown",
-    companyName: "Brown Millwork",
-    email: "sarah@brownmillwork.com",
-    phone: "(508) 555-4421",
-    address: "88 River Rd, Worcester, MA",
-    role: "customer",
-    ordersCount: 2,
-    ticketsOpen: 0,
-  },
-  {
-    userId: "usr_003",
-    name: "Admin User",
-    companyName: "Osmani Admin",
-    email: "admin@example.com",
-    phone: "(781) 555-9100",
-    address: "1 Office Park, Boston, MA",
-    role: "admin",
-    ordersCount: 0,
-    ticketsOpen: 0,
-  },
-];
+type PresetQuestion = {
+  key: string;
+  label: string;
+  value: string;
+};
+
+type PresetRecord = {
+  presetId: string;
+  userId: string;
+  ownerName: string;
+  name: string;
+  presetType: "shop-standards";
+  createdAt: string;
+  updatedAt: string;
+  questions: PresetQuestion[];
+};
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleString();
+}
 
 export default function Account() {
   const auth = useAuth();
 
   const [customerSection, setCustomerSection] =
     useState<CustomerSection>("account");
-
   const [adminSection, setAdminSection] =
     useState<AdminSection>("dashboard");
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    mockCustomers[0]?.userId || ""
-  );
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customersError, setCustomersError] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("all");
 
-  const signOutRedirect = async () => {
-    await auth.removeUser();
+  const [presets, setPresets] = useState<PresetRecord[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(false);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
 
-    const clientId = "454b6vnvplepl6dma4dkf24245";
-    const logoutUri = "http://localhost:5173/";
-    const cognitoDomain =
-      "https://us-east-1ir3zsdplk.auth.us-east-1.amazoncognito.com";
-
-    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
-      logoutUri
-    )}`;
-  };
-
-  if (auth.isLoading) {
-    return <div className="mt-20 text-center">Loading...</div>;
-  }
-
-  if (!auth.isAuthenticated) {
-    return <div className="mt-20 text-center">Please sign in</div>;
-  }
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+  const [editingPreset, setEditingPreset] = useState<PresetRecord | null>(null);
 
   const profile = auth.user?.profile;
 
@@ -123,22 +96,309 @@ export default function Account() {
   const userPhone =
     typeof profile?.phone_number === "string" ? profile.phone_number : "-";
 
+  const currentUserId =
+    (typeof profile?.sub === "string" && profile.sub) || "";
+
   const selectedCustomer =
-    mockCustomers.find((c) => c.userId === selectedCustomerId) ||
-    mockCustomers[0];
+    customers.find((c) => c.userId === selectedCustomerId) || customers[0];
+
+  const customerVisiblePresets = presets.filter(
+    (preset) => preset.userId === currentUserId
+  );
+
+  const adminVisiblePresets =
+    selectedCustomerId === "all"
+      ? presets
+      : presets.filter((preset) => preset.userId === selectedCustomerId);
+
+  const GET_CUSTOMERS_URL = import.meta.env.VITE_GET_CUSTOMERS;
+  const GET_PRESETS_URL = import.meta.env.VITE_GET_PRESETS;
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !isAdmin || !GET_CUSTOMERS_URL) return;
+
+    const loadCustomers = async () => {
+      try {
+        setCustomersLoading(true);
+        setCustomersError(null);
+
+        const response = await fetch(GET_CUSTOMERS_URL, {
+          method: "GET",
+        });
+
+        const text = await response.text();
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch customers: ${response.status} ${text}`);
+        }
+
+        const data = text ? JSON.parse(text) : {};
+        setCustomers(Array.isArray(data.customers) ? data.customers : []);
+      } catch (error) {
+        console.error("loadCustomers error:", error);
+        setCustomersError(
+          error instanceof Error ? error.message : "Failed to fetch customers"
+        );
+      } finally {
+        setCustomersLoading(false);
+      }
+    };
+
+    loadCustomers();
+  }, [GET_CUSTOMERS_URL, auth.isAuthenticated, isAdmin]);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !GET_PRESETS_URL) return;
+    if (!isAdmin && !currentUserId) return;
+
+    const loadPresets = async () => {
+      try {
+        setPresetsLoading(true);
+        setPresetsError(null);
+
+        const url = isAdmin
+          ? `${GET_PRESETS_URL}?all=true`
+          : `${GET_PRESETS_URL}?userId=${encodeURIComponent(currentUserId)}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+        });
+
+        const text = await response.text();
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch presets: ${response.status} ${text}`);
+        }
+
+        const data = text ? JSON.parse(text) : {};
+        setPresets(Array.isArray(data.presets) ? data.presets : []);
+      } catch (error) {
+        console.error("loadPresets error:", error);
+        setPresetsError(
+          error instanceof Error ? error.message : "Failed to fetch presets"
+        );
+      } finally {
+        setPresetsLoading(false);
+      }
+    };
+
+    loadPresets();
+  }, [GET_PRESETS_URL, auth.isAuthenticated, isAdmin, currentUserId]);
+
+  const signOutRedirect = async () => {
+    await auth.removeUser();
+
+    const clientId = "454b6vnvplepl6dma4dkf24245";
+    const logoutUri = "http://localhost:5173/";
+    const cognitoDomain =
+      "https://us-east-1ir3zsdplk.auth.us-east-1.amazoncognito.com";
+
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
+      logoutUri
+    )}`;
+  };
 
   const placeholder = (name: string) => {
     window.alert(`${name} will be connected to backend next.`);
   };
+
+  const togglePresetSelection = (presetId: string) => {
+    setSelectedPresetIds((prev) =>
+      prev.includes(presetId)
+        ? prev.filter((id) => id !== presetId)
+        : [...prev, presetId]
+    );
+  };
+
+  const toggleSelectAll = (ids: string[]) => {
+    const allSelected =
+      ids.length > 0 && ids.every((id) => selectedPresetIds.includes(id));
+
+    if (allSelected) {
+      setSelectedPresetIds((prev) => prev.filter((id) => !ids.includes(id)));
+      return;
+    }
+
+    setSelectedPresetIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const deleteSelectedPresets = () => {
+    if (selectedPresetIds.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedPresetIds.length} selected preset(s)?`
+    );
+
+    if (!confirmed) return;
+
+    setPresets((prev) =>
+      prev.filter((preset) => !selectedPresetIds.includes(preset.presetId))
+    );
+    setSelectedPresetIds([]);
+  };
+
+  const updateEditingPresetName = (value: string) => {
+    if (!editingPreset) return;
+    setEditingPreset({ ...editingPreset, name: value });
+  };
+
+  const updateEditingQuestion = (key: string, value: string) => {
+    if (!editingPreset) return;
+
+    setEditingPreset({
+      ...editingPreset,
+      questions: editingPreset.questions.map((q) =>
+        q.key === key ? { ...q, value } : q
+      ),
+    });
+  };
+
+  const savePresetEdits = () => {
+    if (!editingPreset) return;
+
+    const updatedPreset = {
+      ...editingPreset,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setPresets((prev) =>
+      prev.map((preset) =>
+        preset.presetId === updatedPreset.presetId ? updatedPreset : preset
+      )
+    );
+
+    setEditingPreset(null);
+  };
+
+  const renderPresetTable = (
+    rows: PresetRecord[],
+    showOwner: boolean,
+    title: string,
+    emptyText: string
+  ) => {
+    const visibleIds = rows.map((row) => row.presetId);
+    const allVisibleSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedPresetIds.includes(id));
+
+    return (
+      <div className="border rounded bg-white overflow-hidden">
+        <div className="border-b px-4 py-3 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-sm">{title}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Click preset name to edit. Select multiple rows to delete.
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => placeholder("Create preset")}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+            >
+              New Preset
+            </button>
+
+            <button
+              onClick={deleteSelectedPresets}
+              disabled={selectedPresetIds.length === 0}
+              className={`px-4 py-2 rounded text-sm border ${
+                selectedPresetIds.length === 0
+                  ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                  : "text-red-600 border-red-300 hover:bg-red-50"
+              }`}
+            >
+              Delete Selected
+            </button>
+          </div>
+        </div>
+
+        {presetsLoading ? (
+          <div className="p-6 text-sm text-gray-600">Loading presets...</div>
+        ) : presetsError ? (
+          <div className="p-6 text-sm text-red-600">{presetsError}</div>
+        ) : rows.length === 0 ? (
+          <div className="p-6 text-sm text-gray-600">{emptyText}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="text-left px-4 py-3 w-[50px]">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={() => toggleSelectAll(visibleIds)}
+                    />
+                  </th>
+                  <th className="text-left px-4 py-3">Preset Name</th>
+                  {showOwner && <th className="text-left px-4 py-3">Owner</th>}
+                  <th className="text-left px-4 py-3">Type</th>
+                  <th className="text-left px-4 py-3">Created</th>
+                  <th className="text-left px-4 py-3">Modified</th>
+                  <th className="text-left px-4 py-3">Questions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((preset) => {
+                  const checked = selectedPresetIds.includes(preset.presetId);
+
+                  return (
+                    <tr
+                      key={preset.presetId}
+                      className="border-t hover:bg-gray-50 transition"
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePresetSelection(preset.presetId)}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setEditingPreset(preset)}
+                          className="text-green-600 hover:underline font-medium text-left"
+                        >
+                          {preset.name}
+                        </button>
+                      </td>
+                      {showOwner && (
+                        <td className="px-4 py-3">{preset.ownerName}</td>
+                      )}
+                      <td className="px-4 py-3">{preset.presetType}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {formatDate(preset.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {formatDate(preset.updatedAt)}
+                      </td>
+                      <td className="px-4 py-3">{preset.questions.length}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (auth.isLoading) {
+    return <div className="mt-20 text-center">Loading...</div>;
+  }
+
+  if (!auth.isAuthenticated) {
+    return <div className="mt-20 text-center">Please sign in</div>;
+  }
 
   if (isAdmin) {
     return (
       <div className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">
-              Admin CRM
-            </h1>
+            <h1 className="text-3xl font-semibold text-gray-900">Admin CRM</h1>
             <p className="text-sm text-gray-600 mt-1">
               Signed in as {userName} ({userEmail})
             </p>
@@ -182,6 +442,7 @@ export default function Account() {
                 ["tickets", "Tickets"],
                 ["files", "Files"],
                 ["analytics", "Analytics"],
+                ["presets", "Presets"],
                 ["settings", "Settings"],
               ].map(([key, label]) => {
                 const active = adminSection === key;
@@ -215,7 +476,9 @@ export default function Account() {
                     <div className="text-sm text-gray-500 mb-2">
                       Total Customers
                     </div>
-                    <div className="text-3xl font-semibold">128</div>
+                    <div className="text-3xl font-semibold">
+                      {customers.length || 0}
+                    </div>
                   </div>
 
                   <div className="border rounded p-5 bg-white">
@@ -304,30 +567,50 @@ export default function Account() {
                     </button>
                   </div>
 
-                  <div className="p-3 space-y-2">
-                    {mockCustomers.map((customer) => {
-                      const active = customer.userId === selectedCustomerId;
-                      return (
-                        <button
-                          key={customer.userId}
-                          onClick={() => setSelectedCustomerId(customer.userId)}
-                          className={`w-full text-left border rounded p-3 transition ${
-                            active
-                              ? "border-green-500 bg-green-50"
-                              : "hover:bg-gray-50"
-                          }`}
-                        >
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-sm text-gray-600">
-                            {customer.companyName}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {customer.email}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {customersLoading && (
+                    <div className="p-4 text-sm text-gray-600">
+                      Loading customers...
+                    </div>
+                  )}
+
+                  {customersError && (
+                    <div className="p-4 text-sm text-red-600">
+                      {customersError}
+                    </div>
+                  )}
+
+                  {!customersLoading && !customersError && (
+                    <div className="p-3 space-y-2">
+                      {customers.length === 0 ? (
+                        <div className="text-sm text-gray-500 p-2">
+                          No customers found.
+                        </div>
+                      ) : (
+                        customers.map((customer) => {
+                          const active = customer.userId === selectedCustomerId;
+                          return (
+                            <button
+                              key={customer.userId}
+                              onClick={() => setSelectedCustomerId(customer.userId)}
+                              className={`w-full text-left border rounded p-3 transition ${
+                                active
+                                  ? "border-green-500 bg-green-50"
+                                  : "hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className="font-medium">{customer.name}</div>
+                              <div className="text-sm text-gray-600">
+                                {customer.companyName || "-"}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {customer.email}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-6">
@@ -353,33 +636,35 @@ export default function Account() {
                     <div className="p-4 grid md:grid-cols-2 gap-6 text-sm">
                       <div className="space-y-2">
                         <p>
-                          <strong>Name:</strong> {selectedCustomer.name}
+                          <strong>Name:</strong> {selectedCustomer?.name || "-"}
                         </p>
                         <p>
                           <strong>Company:</strong>{" "}
-                          {selectedCustomer.companyName}
+                          {selectedCustomer?.companyName || "-"}
                         </p>
                         <p>
-                          <strong>Email:</strong> {selectedCustomer.email}
+                          <strong>Email:</strong> {selectedCustomer?.email || "-"}
                         </p>
                         <p>
-                          <strong>Phone:</strong> {selectedCustomer.phone}
+                          <strong>Phone:</strong> {selectedCustomer?.phone || "-"}
                         </p>
                       </div>
 
                       <div className="space-y-2">
                         <p>
-                          <strong>Address:</strong> {selectedCustomer.address}
+                          <strong>Address:</strong>{" "}
+                          {selectedCustomer?.address || "-"}
                         </p>
                         <p>
-                          <strong>Role:</strong> {selectedCustomer.role}
+                          <strong>Role:</strong> {selectedCustomer?.role || "-"}
                         </p>
                         <p>
-                          <strong>Orders:</strong> {selectedCustomer.ordersCount}
+                          <strong>Orders:</strong>{" "}
+                          {selectedCustomer?.ordersCount ?? 0}
                         </p>
                         <p>
                           <strong>Open Tickets:</strong>{" "}
-                          {selectedCustomer.ticketsOpen}
+                          {selectedCustomer?.ticketsOpen ?? 0}
                         </p>
                       </div>
                     </div>
@@ -515,6 +800,38 @@ export default function Account() {
               </div>
             )}
 
+            {adminSection === "presets" && (
+              <div className="space-y-6">
+                <div className="border rounded bg-white p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="text-sm font-semibold text-gray-800">
+                      Filter by customer:
+                    </div>
+
+                    <select
+                      value={selectedCustomerId}
+                      onChange={(e) => setSelectedCustomerId(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="all">All Customers</option>
+                      {customers.map((customer) => (
+                        <option key={customer.userId} value={customer.userId}>
+                          {customer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {renderPresetTable(
+                  adminVisiblePresets,
+                  true,
+                  "Customer Presets",
+                  "No presets found for this customer."
+                )}
+              </div>
+            )}
+
             {adminSection === "settings" && (
               <div className="border rounded bg-white">
                 <div className="border-b px-4 py-3 font-semibold text-sm bg-gray-50">
@@ -528,6 +845,94 @@ export default function Account() {
             )}
           </div>
         </div>
+
+        {editingPreset && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden">
+              <div className="border-b px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Edit Preset</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Update preset name and saved answers.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditingPreset(null)}
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5 overflow-y-auto max-h-[65vh]">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Preset Name
+                  </label>
+                  <input
+                    value={editingPreset.name}
+                    onChange={(e) => updateEditingPresetName(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <strong>Owner:</strong> {editingPreset.ownerName}
+                  </div>
+                  <div>
+                    <strong>Type:</strong> {editingPreset.presetType}
+                  </div>
+                  <div>
+                    <strong>Created:</strong> {formatDate(editingPreset.createdAt)}
+                  </div>
+                  <div>
+                    <strong>Modified:</strong>{" "}
+                    {formatDate(editingPreset.updatedAt)}
+                  </div>
+                </div>
+
+                <div className="border rounded">
+                  <div className="border-b px-4 py-3 bg-gray-50 font-semibold text-sm">
+                    Preset Questions
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {editingPreset.questions.map((question) => (
+                      <div key={question.key}>
+                        <label className="block text-sm font-medium mb-2">
+                          {question.label}
+                        </label>
+                        <input
+                          value={question.value}
+                          onChange={(e) =>
+                            updateEditingQuestion(question.key, e.target.value)
+                          }
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t px-6 py-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setEditingPreset(null)}
+                  className="border px-4 py-2 rounded text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={savePresetEdits}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -547,6 +952,7 @@ export default function Account() {
             ["account", "Account Information"],
             ["gift-cards", "Gift Cards"],
             ["saved-carts", "Saved Carts"],
+            ["saved-presets", "Saved Presets"],
           ].map(([key, label]) => {
             const active = customerSection === key;
             return (
@@ -573,7 +979,7 @@ export default function Account() {
         </div>
 
         {customerSection === "overview" && (
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-4 gap-6">
             <div className="border rounded p-5">
               <div className="text-sm text-gray-500 mb-2">Account Type</div>
               <div className="font-semibold">
@@ -587,6 +993,12 @@ export default function Account() {
             <div className="border rounded p-5">
               <div className="text-sm text-gray-500 mb-2">Orders</div>
               <div className="font-semibold">0</div>
+            </div>
+            <div className="border rounded p-5">
+              <div className="text-sm text-gray-500 mb-2">Saved Presets</div>
+              <div className="font-semibold">
+                {customerVisiblePresets.length}
+              </div>
             </div>
           </div>
         )}
@@ -673,12 +1085,129 @@ export default function Account() {
           </div>
         )}
 
+        {customerSection === "saved-presets" && (
+          <div className="space-y-6">
+            <div className="border rounded bg-white p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Saved Presets</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Manage your saved shop standard presets. You can open, edit,
+                    and remove one or more presets from here.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => placeholder("Create preset")}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  New Preset
+                </button>
+              </div>
+            </div>
+
+            {renderPresetTable(
+              customerVisiblePresets,
+              false,
+              "My Presets",
+              "No saved presets yet."
+            )}
+          </div>
+        )}
+
         <div className="mt-10 inline-block text-sm text-red-600">
           <button className="cursor-pointer" onClick={signOutRedirect}>
             Sign out
           </button>
         </div>
       </div>
+
+      {editingPreset && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden">
+            <div className="border-b px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Edit Preset</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Update preset name and saved answers.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingPreset(null)}
+                className="text-gray-500 hover:text-gray-700 text-sm"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto max-h-[65vh]">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Preset Name
+                </label>
+                <input
+                  value={editingPreset.name}
+                  onChange={(e) => updateEditingPresetName(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <strong>Owner:</strong> {editingPreset.ownerName}
+                </div>
+                <div>
+                  <strong>Type:</strong> {editingPreset.presetType}
+                </div>
+                <div>
+                  <strong>Created:</strong> {formatDate(editingPreset.createdAt)}
+                </div>
+                <div>
+                  <strong>Modified:</strong> {formatDate(editingPreset.updatedAt)}
+                </div>
+              </div>
+
+              <div className="border rounded">
+                <div className="border-b px-4 py-3 bg-gray-50 font-semibold text-sm">
+                  Preset Questions
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {editingPreset.questions.map((question) => (
+                    <div key={question.key}>
+                      <label className="block text-sm font-medium mb-2">
+                        {question.label}
+                      </label>
+                      <input
+                        value={question.value}
+                        onChange={(e) =>
+                          updateEditingQuestion(question.key, e.target.value)
+                        }
+                        className="w-full border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setEditingPreset(null)}
+                className="border px-4 py-2 rounded text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={savePresetEdits}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

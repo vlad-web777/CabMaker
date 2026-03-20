@@ -1,75 +1,156 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { cabinetConfig } from "../models/cabinetConfig";
-import type { Cabinet, CabinetCategory, CabinetOption } from "../types/cabinet";
+import type { Cabinet, CabinetOption } from "../types/cabinet";
 import { useCart } from "../context/CartContext";
+
+type CabinetType = "frameless" | "framed";
+
+type MenuConfig = {
+  type: CabinetType;
+  menu: string;
+};
+
+const cabinetMenus: MenuConfig[] = [
+  { type: "frameless", menu: "Base" },
+  { type: "frameless", menu: "Upper" },
+  { type: "frameless", menu: "Tall" },
+  { type: "frameless", menu: "Base Corner" },
+
+  { type: "framed", menu: "Base" },
+  { type: "framed", menu: "Upper" },
+  { type: "framed", menu: "Tall" },
+  { type: "framed", menu: "Base Corner" },
+];
 
 /**
  * Cabinet Builder
  *
- * Features:
- * - Cabinet type switcher
- * - Sidebar category menu
- * - Searchable cabinet grid
- * - Cabinet modal
- * - Required field validation
- * - Scrollable modal
- * - Hidden/system options support
+ * Backend-driven version:
+ * - cabinet data comes from API
+ * - menu list stays local
+ * - fetches when page opens / type changes
+ * - search across all cabinets for selected type
+ * - modal with required field validation
  */
 const CabinetBuilder: React.FC = () => {
   const { addToCart } = useCart();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  /**
-   * Cabinet system type (frameless / framed)
-   */
-  const [cabinetType, setCabinetType] = useState<string>(
-    searchParams.get("type") || "frameless"
+  const initialType =
+    searchParams.get("type") === "framed" ? "framed" : "frameless";
+
+  const [cabinetType, setCabinetType] = useState<CabinetType>(initialType);
+
+  const menusForType = useMemo(
+    () => cabinetMenus.filter((item) => item.type === cabinetType),
+    [cabinetType]
   );
 
-  /**
-   * Filter all config categories to selected type
-   */
-  const filteredConfig: CabinetCategory[] = cabinetConfig.filter(
-    (item) => item.type === cabinetType
-  );
+  const initialMenuFromUrl = searchParams.get("menu") || "";
+  const safeInitialMenu =
+    menusForType.find((m) => m.menu === initialMenuFromUrl)?.menu ||
+    menusForType[0]?.menu ||
+    "";
 
-  /**
-   * Active sidebar menu
-   */
-  const [activeMenu, setActiveMenu] = useState<string>(
-    filteredConfig[0]?.menu || ""
-  );
+  const [activeMenu, setActiveMenu] = useState<string>(safeInitialMenu);
 
-  /**
-   * Cabinet currently open in modal
-   */
+  const [allCabinets, setAllCabinets] = useState<Cabinet[]>([]);
+  const [loadingCabinets, setLoadingCabinets] = useState<boolean>(false);
+  const [loadingError, setLoadingError] = useState<string>("");
+
   const [selectedCabinet, setSelectedCabinet] = useState<Cabinet | null>(null);
-
-  /**
-   * Entered / selected option values for current cabinet
-   */
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
     {}
   );
-
-  /**
-   * Tracks fields user interacted with
-   */
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>(
     {}
   );
-
-  /**
-   * Cabinet search
-   */
   const [search, setSearch] = useState<string>("");
 
   /**
-   * Reset sidebar menu when cabinet type changes
+   * Keep active menu valid when type changes
    */
   useEffect(() => {
-    setActiveMenu(filteredConfig[0]?.menu || "");
+    const availableMenus = cabinetMenus.filter((item) => item.type === cabinetType);
+    const urlMenu = searchParams.get("menu") || "";
+
+    const validMenu =
+      availableMenus.find((item) => item.menu === urlMenu)?.menu ||
+      availableMenus[0]?.menu ||
+      "";
+
+    setActiveMenu(validMenu);
+  }, [cabinetType, searchParams]);
+
+  /**
+   * Keep URL in sync
+   */
+  useEffect(() => {
+    if (!cabinetType || !activeMenu) return;
+
+    setSearchParams(
+      {
+        type: cabinetType,
+        menu: activeMenu,
+      },
+      { replace: true }
+    );
+  }, [cabinetType, activeMenu, setSearchParams]);
+
+  /**
+   * Fetch cabinets when page opens / type changes
+   *
+   * Example backend endpoint:
+   * GET /api/cabinets?type=frameless
+   *
+   * Expected response:
+   * Cabinet[]
+   */
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchCabinets() {
+      try {
+        setLoadingCabinets(true);
+        setLoadingError("");
+
+        const API_BASE =
+          import.meta.env.VITE_API_BASE || "http://localhost:5371/APIError}";
+
+        const response = await fetch(
+          `${API_BASE}/fetchCabinetList?type=${encodeURIComponent(cabinetType)}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to load cabinets (${response.status})`);
+        }
+
+        const data: Cabinet[] = await response.json();
+
+        if (!isMounted) return;
+
+        setAllCabinets(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (!isMounted) return;
+
+        setAllCabinets([]);
+        setLoadingError(
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while loading cabinets."
+        );
+      } finally {
+        if (isMounted) {
+          setLoadingCabinets(false);
+        }
+      }
+    }
+
+    fetchCabinets();
+
+    return () => {
+      isMounted = false;
+    };
   }, [cabinetType]);
 
   /**
@@ -88,17 +169,7 @@ const CabinetBuilder: React.FC = () => {
   }, [selectedCabinet]);
 
   /**
-   * Find active category by menu
-   */
-  const category = filteredConfig.find((item) => item.menu === activeMenu);
-
-  /**
-   * Initialize cabinet options when modal opens
-   *
-   * Rules:
-   * - select => first value, unless defaultValue exists
-   * - input/number => defaultValue or ""
-   * - hidden options are still initialized
+   * Initialize option defaults when modal opens
    */
   useEffect(() => {
     if (!selectedCabinet) return;
@@ -107,7 +178,7 @@ const CabinetBuilder: React.FC = () => {
 
     selectedCabinet.options?.forEach((opt) => {
       if (opt.defaultValue !== undefined) {
-        defaults[opt.label] = opt.defaultValue;
+        defaults[opt.label] = String(opt.defaultValue);
         return;
       }
 
@@ -122,26 +193,15 @@ const CabinetBuilder: React.FC = () => {
     setTouchedFields({});
   }, [selectedCabinet]);
 
-  /**
-   * Treat blank / whitespace as empty
-   */
   const isFieldEmpty = (value: string | undefined) => {
     return !value || value.trim() === "";
   };
 
-  /**
-   * Only options visible to customer should be rendered
-   * hidden options are still stored internally
-   */
   const visibleOptions: CabinetOption[] = useMemo(() => {
     if (!selectedCabinet?.options) return [];
-
     return selectedCabinet.options.filter((opt) => opt.visible !== false);
   }, [selectedCabinet]);
 
-  /**
-   * Validate only required fields that the customer can actually see/fill
-   */
   const missingRequiredFields = useMemo(() => {
     if (!selectedCabinet) return [];
 
@@ -158,9 +218,6 @@ const CabinetBuilder: React.FC = () => {
 
   const isCabinetValid = missingRequiredFields.length === 0;
 
-  /**
-   * Update one option value
-   */
   const handleOptionChange = (label: string, value: string) => {
     setSelectedOptions((prev) => ({
       ...prev,
@@ -173,18 +230,12 @@ const CabinetBuilder: React.FC = () => {
     }));
   };
 
-  /**
-   * Close modal and reset state
-   */
   const closeModal = () => {
     setSelectedCabinet(null);
     setSelectedOptions({});
     setTouchedFields({});
   };
 
-  /**
-   * Add cabinet to cart only if visible required fields are complete
-   */
   const handleAddCabinet = () => {
     if (!selectedCabinet) return;
 
@@ -215,6 +266,33 @@ const CabinetBuilder: React.FC = () => {
 
     closeModal();
   };
+
+  /**
+   * Search behavior:
+   * - no search => show only active menu
+   * - with search => search across all cabinets for selected type
+   *
+   * Assumes each cabinet returned by API has a `menu` property.
+   */
+  const displayedCabinets = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) {
+      return allCabinets
+        .filter((cabinet) => cabinet.menu === activeMenu)
+        .map((cabinet) => ({
+          cabinet,
+          menu: cabinet.menu,
+        }));
+    }
+
+    return allCabinets
+      .filter((cabinet) => cabinet.name.toLowerCase().includes(term))
+      .map((cabinet) => ({
+        cabinet,
+        menu: cabinet.menu,
+      }));
+  }, [allCabinets, activeMenu, search]);
 
   return (
     <>
@@ -271,7 +349,7 @@ const CabinetBuilder: React.FC = () => {
       >
         {/* Sidebar */}
         <div>
-          {filteredConfig.map((item) => (
+          {menusForType.map((item) => (
             <button
               key={item.menu}
               onClick={() => setActiveMenu(item.menu)}
@@ -308,19 +386,59 @@ const CabinetBuilder: React.FC = () => {
             />
           </div>
 
+          {/* Loading / Error */}
+          {loadingCabinets && (
+            <div
+              style={{
+                padding: "12px 0",
+                color: "#555",
+              }}
+            >
+              Loading cabinets...
+            </div>
+          )}
+
+          {!loadingCabinets && loadingError && (
+            <div
+              style={{
+                padding: "12px",
+                marginBottom: "20px",
+                background: "#fdecea",
+                color: "#b71c1c",
+                border: "1px solid #f5c6cb",
+                borderRadius: "6px",
+              }}
+            >
+              {loadingError}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loadingCabinets && !loadingError && displayedCabinets.length === 0 && (
+            <div
+              style={{
+                padding: "20px",
+                border: "1px solid #ddd",
+                borderRadius: "6px",
+                color: "#666",
+              }}
+            >
+              No cabinets found.
+            </div>
+          )}
+
           {/* Cabinet Grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
-              gap: "20px",
-            }}
-          >
-            {category?.cabinets
-              .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
-              .map((cabinet) => (
+          {!loadingCabinets && !loadingError && displayedCabinets.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: "20px",
+              }}
+            >
+              {displayedCabinets.map(({ cabinet, menu }) => (
                 <div
-                  key={cabinet.id}
+                  key={`${menu}-${cabinet.id}`}
                   onClick={() => setSelectedCabinet(cabinet)}
                   style={{
                     border: "1px solid #ddd",
@@ -346,11 +464,24 @@ const CabinetBuilder: React.FC = () => {
                       fontSize: "14px",
                     }}
                   >
-                    {cabinet.name}
+                    <div>{cabinet.name}</div>
+
+                    {search.trim() && (
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          fontSize: "12px",
+                          opacity: 0.85,
+                        }}
+                      >
+                        {menu}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -392,7 +523,6 @@ const CabinetBuilder: React.FC = () => {
               boxSizing: "border-box",
             }}
           >
-            {/* Close */}
             <button
               onClick={closeModal}
               style={{

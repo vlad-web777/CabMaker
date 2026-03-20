@@ -18,13 +18,14 @@ const categories = [
     description: "Elegant and functional vanity cabinets designed for bathrooms, with moisture-resistant finishes and customizable sizes.",
     image: "https://images.unsplash.com/photo-1737630914827-829ad1cd972e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiZWF1dGlmdWwlMjBiYXRocm9vbSUyMHZhbml0eSUyMGNhYmluZXQlMjB3aGl0ZXxlbnwxfHx8fDE3NzI1ODAyMTh8MA&ixlib=rb-4.1.0&q=80&w=600",
     tag: "New",
-  },
-  {
-    title: "Kitchen Islands",
-    description: "Freestanding or built-in island cabinets to add workspace, storage, and style to the center of your kitchen.",
-    image: "https://images.unsplash.com/photo-1765766601532-90e9b96320c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxraXRjaGVuJTIwaXNsYW5kJTIwZGFyayUyMHdvb2QlMjBtb2Rlcm4lMjBjYWJpbmV0c3xlbnwxfHx8fDE3NzI1ODAyMTh8MA&ixlib=rb-4.1.0&q=80&w=600",
-    tag: null,
-  },
+  }
+  // ,
+  // {
+  //   title: "Kitchen Islands",
+  //   description: "Freestanding or built-in island cabinets to add workspace, storage, and style to the center of your kitchen.",
+  //   image: "https://images.unsplash.com/photo-1765766601532-90e9b96320c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxraXRjaGVuJTIwaXNsYW5kJTIwZGFyayUyMHdvb2QlMjBtb2Rlcm4lMjBjYWJpbmV0c3xlbnwxfHx8fDE3NzI1ODAyMTh8MA&ixlib=rb-4.1.0&q=80&w=600",
+  //   tag: null,
+  // },
 ];
 
 export function ProductCategories() {
@@ -58,7 +59,8 @@ export function ProductCategories() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* old version of grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6*/}
+        <div className="flex flex-col md:flex-row gap-8">
           {categories.map((cat) => (
             <a
               key={cat.title}

@@ -210,10 +210,38 @@ export default function ShopStandards() {
           value={formData.presetName}
           onChange={(e) => handleChange("presetName", e.target.value)}
         />
+        <div className="border rounded p-4 ">
+          <TextInput
+            label="Project Name"
+            value={formData.presetName}
+            onChange={(e) => handleChange("presetName", e.target.value)}
+          />
+
+          <TextInput
+            label="Customer Name"
+            value={formData.presetName}
+            onChange={(e) => handleChange("presetName", e.target.value)}
+          />
+
+          <TextInput
+            label="Customer Phone Number"
+            value={formData.presetName}
+            onChange={(e) => handleChange("presetName", e.target.value)}
+          />
+
+
+          <TextInput
+            label="Customer Address"
+            value={formData.presetName}
+            onChange={(e) => handleChange("presetName", e.target.value)}
+          />
+
+        </div>
+
 
         <SelectInput
           label="Door / Fronts Type"
-          options={["NOT Supplied", "Type A", "Type B"]}
+          options={["NOT Supplied", "Flat", "SFP"]}
           value={formData.doorType}
           onChange={(e) => handleChange("doorType", e.target.value)}
         />
@@ -232,13 +260,6 @@ export default function ShopStandards() {
           onChange={(e) => handleChange("constructionMethod", e.target.value)}
         />
 
-        <SelectInput
-          label="Shelf Edgeband Selection"
-          options={["Match Front", "Option B"]}
-          value={formData.shelfEdgeband}
-          onChange={(e) => handleChange("shelfEdgeband", e.target.value)}
-        />
-
         <SliderInput
           label="Top Drawer Front Height"
           min={3}
@@ -249,7 +270,7 @@ export default function ShopStandards() {
           }
         />
 
-        <RadioGroup
+        {/* <RadioGroup
           label="Drawer Style"
           options={[
             { label: "Flat", value: "Flat" },
@@ -257,7 +278,7 @@ export default function ShopStandards() {
           ]}
           selectedValue={formData.drawerStyle}
           onChange={(v) => handleChange("drawerStyle", v)}
-        />
+        /> */}
       </div>
 
       <div className="flex justify-center mt-8 mb-10">

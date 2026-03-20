@@ -6,6 +6,7 @@ import { AuthProvider } from "react-oidc-context"
 
 const cognitoAuthConfig = {
   authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_iR3Zsdplk",
+  // this is located on Cognito > App clients > Clien ID section
   client_id: "454b6vnvplepl6dma4dkf24245",
   redirect_uri: "http://localhost:5173/",
   post_logout_redirect_uri: "http://localhost:5173/", // must match Allowed sign-out URLs

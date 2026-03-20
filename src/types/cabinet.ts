@@ -35,6 +35,7 @@ export type Cabinet = {
   fileName: string
   directory: string
   options?: CabinetOption[]
+  menu?: string
 }
 
 export type CabinetCategory = {

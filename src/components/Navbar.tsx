@@ -5,27 +5,34 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "react-oidc-context"
 import ScrollToTop from "./ScrollToTop";
 
+const CompanyName = "Elite Kitchen Design"
+
 const navLinks = [
   {
-    label: "Frameless Cabinetry",
-    href: "/builder?type=frameless",
-    dropdown: [
-      { label: "Base Cabinets", href: "/builder?type=frameless&menu=Base" },
-      { label: "Wall Cabinets", href: "/builder?type=frameless&menu=Upper" },
-      { label: "Tall Cabinets", href: "/builder?type=frameless&menu=Tall" },
-      { label: "Corner Units", href: "/builder?type=frameless&menu=Base Corner" },
-    ],
+    label: "Cabinetry",
+    href:"/Cabinetry",
+    dropdown:[]
   },
-  {
-    label: "Framed Cabinetry",
-    href: "/builder?type=framed",
-    dropdown: [
-      { label: "Base Cabinets", href: "/builder?type=framed&menu=Base" },
-      { label: "Wall Cabinets", href: "/builder?type=framed&menu=Upper" },
-      { label: "Tall Cabinets", href: "/builder?type=framed&menu=Tall" },
-      { label: "Corner Units", href: "/builder?type=framed&menu=Base Corner" },
-    ],
-  },
+  // {
+  //   label: "Frameless Cabinetry",
+  //   href: "/builder?type=frameless",
+  //   dropdown: [
+  //     { label: "Base Cabinets", href: "/builder?type=frameless&menu=Base" },
+  //     { label: "Wall Cabinets", href: "/builder?type=frameless&menu=Upper" },
+  //     { label: "Tall Cabinets", href: "/builder?type=frameless&menu=Tall" },
+  //     { label: "Corner Units", href: "/builder?type=frameless&menu=Base Corner" },
+  //   ],
+  // },
+  // {
+  //   label: "Framed Cabinetry",
+  //   href: "/builder?type=framed",
+  //   dropdown: [
+  //     { label: "Base Cabinets", href: "/builder?type=framed&menu=Base" },
+  //     { label: "Wall Cabinets", href: "/builder?type=framed&menu=Upper" },
+  //     { label: "Tall Cabinets", href: "/builder?type=framed&menu=Tall" },
+  //     { label: "Corner Units", href: "/builder?type=framed&menu=Base Corner" },
+  //   ],
+  // },
   { label: "Our Work", href: "/work", dropdown: [] },
   { label: "About Us", href: "/about", dropdown: [] },
   { label: "Contact Us", href: "/contact", dropdown: [] },
@@ -39,11 +46,12 @@ export function Navbar() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const auth = useAuth()
-const callApi = async () => {
-  const res = await fetch("https://d13ttutzue.execute-api.us-east-1.amazonaws.com/default/helloTest")
-  const data = await res.json()
-  alert(data)
-}
+  
+  const callApi = async () => {
+    const res = await fetch("https://d13ttutzue.execute-api.us-east-1.amazonaws.com/default/helloTest")
+    const data = await res.json()
+    alert(data)
+  }
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white">
       <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[70px]">
@@ -51,7 +59,7 @@ const callApi = async () => {
         {/* Logo */}
         <Link onClick={() => ScrollToTop()} to="/" className="flex items-center gap-2 shrink-0">
           <span className="text-[#1a1a2e] tracking-tight text-[1.5rem] font-bold">
-            <span className="text-[#22c55e]">Makrams</span>
+            <span className="text-[#22c55e]">{CompanyName}</span>
           </span>
         </Link>
 
@@ -77,7 +85,7 @@ const callApi = async () => {
                 )}
               </Link>
 
-              {link.dropdown.length > 0 && openDropdown === link.label && (
+              {/* {link.dropdown.length > 0 && openDropdown === link.label && (
                 <div className="absolute top-full left-0 w-52 bg-white shadow-xl border border-gray-100 rounded-b-lg overflow-hidden z-50">
                   {link.dropdown.map((item) => (
                     <Link
@@ -89,7 +97,7 @@ const callApi = async () => {
                     </Link>
                   ))}
                 </div>
-              )}
+              )} */}
             </div>
           ))}
         </nav>
@@ -169,7 +177,7 @@ const callApi = async () => {
                 >
                   {link.label}
                 </Link>
-
+{/* 
                 {link.dropdown.map((item) => (
                   <Link
                     key={item.label}
@@ -178,7 +186,7 @@ const callApi = async () => {
                   >
                     {item.label}
                   </Link>
-                ))}
+                ))} */}
               </div>
             ))}
           </div>
