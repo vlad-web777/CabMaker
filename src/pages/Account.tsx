@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "react-oidc-context";
+import ProductsAdmin from "../pages/ProductsAdmin";
 
 type CustomerSection =
   | "overview"
@@ -14,6 +15,7 @@ type AdminSection =
   | "dashboard"
   | "customers"
   | "orders"
+  | "products"
   | "tickets"
   | "files"
   | "analytics"
@@ -122,30 +124,40 @@ export default function Account() {
         setCustomersLoading(true);
         setCustomersError(null);
 
+        // const token = auth.user?.access_token || auth.user?.id_token;
+
         const response = await fetch(GET_CUSTOMERS_URL, {
           method: "GET",
+          headers: {
+            Authorization: `Bearer ${auth.user?.access_token}`,
+            "Content-Type": "application/json",
+          },
         });
 
-        const text = await response.text();
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch customers: ${response.status} ${text}`);
+        if (response.status === 401) {
+          throw new Error("Unauthorized");
         }
 
-        const data = text ? JSON.parse(text) : {};
+        if (response.status === 403) {
+          throw new Error("Forbidden");
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to load customers");
+        }
+
+        const data = await response.json();
+        console.log("customers response:", data);
         setCustomers(Array.isArray(data.customers) ? data.customers : []);
-      } catch (error) {
-        console.error("loadCustomers error:", error);
-        setCustomersError(
-          error instanceof Error ? error.message : "Failed to fetch customers"
-        );
+      } catch (err) {
+        setCustomersError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setCustomersLoading(false);
       }
     };
 
     loadCustomers();
-  }, [GET_CUSTOMERS_URL, auth.isAuthenticated, isAdmin]);
+  }, [auth.isAuthenticated, auth.user, isAdmin, GET_CUSTOMERS_URL]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !GET_PRESETS_URL) return;
@@ -187,11 +199,11 @@ export default function Account() {
 
   const signOutRedirect = async () => {
     await auth.removeUser();
-
-    const clientId = "454b6vnvplepl6dma4dkf24245";
+    const cognitoDomainAPI = import.meta.env.VITE_COGNITO_DOMAIN;
+    const clientIdAPI = import.meta.env.VITE_COGNITO_CLIENT_ID;
+    const clientId = clientIdAPI
     const logoutUri = "http://localhost:5173/";
-    const cognitoDomain =
-      "https://us-east-1ir3zsdplk.auth.us-east-1.amazoncognito.com";
+    const cognitoDomain = cognitoDomainAPI;
 
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
       logoutUri
@@ -302,11 +314,10 @@ export default function Account() {
             <button
               onClick={deleteSelectedPresets}
               disabled={selectedPresetIds.length === 0}
-              className={`px-4 py-2 rounded text-sm border ${
-                selectedPresetIds.length === 0
-                  ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                  : "text-red-600 border-red-300 hover:bg-red-50"
-              }`}
+              className={`px-4 py-2 rounded text-sm border ${selectedPresetIds.length === 0
+                ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                : "text-red-600 border-red-300 hover:bg-red-50"
+                }`}
             >
               Delete Selected
             </button>
@@ -439,6 +450,7 @@ export default function Account() {
                 ["dashboard", "Dashboard"],
                 ["customers", "Customers"],
                 ["orders", "Orders"],
+                ["products", "Products"],
                 ["tickets", "Tickets"],
                 ["files", "Files"],
                 ["analytics", "Analytics"],
@@ -450,11 +462,10 @@ export default function Account() {
                   <li
                     key={key}
                     onClick={() => setAdminSection(key as AdminSection)}
-                    className={`px-4 py-3 cursor-pointer transition ${
-                      active
-                        ? "text-green-600 font-medium bg-white border-l-4 border-green-500"
-                        : "hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-3 cursor-pointer transition ${active
+                      ? "text-green-600 font-medium bg-white border-l-4 border-green-500"
+                      : "hover:bg-gray-200"
+                      }`}
                   >
                     {label}
                   </li>
@@ -592,11 +603,10 @@ export default function Account() {
                             <button
                               key={customer.userId}
                               onClick={() => setSelectedCustomerId(customer.userId)}
-                              className={`w-full text-left border rounded p-3 transition ${
-                                active
-                                  ? "border-green-500 bg-green-50"
-                                  : "hover:bg-gray-50"
-                              }`}
+                              className={`w-full text-left border rounded p-3 transition ${active
+                                ? "border-green-500 bg-green-50"
+                                : "hover:bg-gray-50"
+                                }`}
                             >
                               <div className="font-medium">{customer.name}</div>
                               <div className="text-sm text-gray-600">
@@ -763,6 +773,8 @@ export default function Account() {
                 </div>
               </div>
             )}
+
+            {adminSection === "products" && <ProductsAdmin />}
 
             {adminSection === "tickets" && (
               <div className="border rounded bg-white">
@@ -959,11 +971,10 @@ export default function Account() {
               <li
                 key={key}
                 onClick={() => setCustomerSection(key as CustomerSection)}
-                className={`px-4 py-3 cursor-pointer transition ${
-                  active
-                    ? "text-green-600 font-medium bg-white border-l-4 border-green-500"
-                    : "hover:bg-gray-200"
-                }`}
+                className={`px-4 py-3 cursor-pointer transition ${active
+                  ? "text-green-600 font-medium bg-white border-l-4 border-green-500"
+                  : "hover:bg-gray-200"
+                  }`}
               >
                 {label}
               </li>

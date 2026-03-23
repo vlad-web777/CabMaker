@@ -20,6 +20,7 @@ import Account from "./pages/Account";
 import Cabinetry from "./pages/Cabinetry";
 import ProtectedRoute from "./components/ProtectedRoute";
 import APIErrorPage from "./pages/APIErrorPage";
+import Test from "./pages/test";
 
 // import CabinetSide from "./components/CabinetSide";
 
@@ -55,7 +56,7 @@ export default function App() {
                 //Vlad 3-18-2026:  Wrap the ShopStandards component with ProtectedRoute so only logged-in users can access it
                 <ProtectedRoute> 
                   <ShopStandards />
-                //</ProtectedRoute>
+                </ProtectedRoute>
               }
             />
             <Route path="/builder" element={<CabinetBuilder />} />
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="/account" element={<Account />} />
             <Route path="/Cabinetry" element={<Cabinetry />} />
             <Route path="/APIErrorPage" element={<APIErrorPage />} />
+            <Route path="/test" element={<Test/>}/> 
           </Routes>
         </main>
 

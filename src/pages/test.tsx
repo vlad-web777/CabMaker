@@ -1,23 +1,34 @@
-export default function TestPage() {
-    const nLinks = [
-        { label: "frameless", type1: "Euro Base", type2: "Euro Wall", type3: "Euro Tall" },
-        { label: "framed", type1: "Frame Base", type2: "Frame Wall", type3: "Frame Tall" },
-    ]
-    return (
+export default function Test() {
+  const testCreateCabinet = async () => {
+    try {
+      const response = await fetch(
+        "https://xlf7u20eu2.execute-api.us-east-1.amazonaws.com/default/createCabinet",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cabinetType: "frameless",
+            cabinetKey: "test-1",
+            name: "Test Cabinet 1",
+          }),
+        }
+      );
 
-        <div className="bg-gray-500">
-            {nLinks.map((link) => (
-                <div>
-                    <h1>{link.label}</h1>
-                    <ol>
-                        {link.type1}
-                        {link.type2}
-                        {link.type3}
-                    </ol>
+      const text = await response.text();
+      console.log("status:", response.status);
+      console.log("response:", text);
+    } catch (error) {
+      console.error("createCabinet test error:", error);
+    }
+  };
 
-                </div>
-            ))}
-        </div>
-    )
+  return (
+    <div style={{ padding: "20px" }}>
+      <button onClick={testCreateCabinet}>
+        Test Create Cabinet
+      </button>
+    </div>
+  );
 }
-

@@ -13,17 +13,17 @@ export function ContactInfo() {
 
           <div className="flex items-center gap-3">
             <Phone className="w-5 h-5 text-[#22c55e]" />
-            (555) 123-4567
+            (239) 784-0494
           </div>
 
           <div className="flex items-center gap-3">
             <Mail className="w-5 h-5 text-[#22c55e]" />
-            info@makrams.com
+            deniselite77@yahoo.com
           </div>
 
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-[#22c55e]" />
-            Anaheim, CA
+            Nashville, Tn
           </div>
 
         </div>

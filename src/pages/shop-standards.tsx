@@ -137,6 +137,10 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
 type ShopStandardsFormData = {
   measurementUnit: string;
   presetName: string;
+  projectName: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
   doorType: string;
   sidesMaterial: string;
   constructionMethod: string;
@@ -151,6 +155,10 @@ export default function ShopStandards() {
   const initialFormData: ShopStandardsFormData = {
     measurementUnit: "Imperial",
     presetName: "",
+    projectName: "",
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
     doorType: "NOT Supplied",
     sidesMaterial: "Select Material",
     constructionMethod: "LamelloTenso-3mm Pilot Holes",
@@ -213,27 +221,27 @@ export default function ShopStandards() {
         <div className="border rounded p-4 ">
           <TextInput
             label="Project Name"
-            value={formData.presetName}
-            onChange={(e) => handleChange("presetName", e.target.value)}
+            value={formData.projectName}
+            onChange={(e) => handleChange("projectName", e.target.value)}
           />
 
           <TextInput
             label="Customer Name"
-            value={formData.presetName}
-            onChange={(e) => handleChange("presetName", e.target.value)}
+            value={formData.customerName}
+            onChange={(e) => handleChange("customerName", e.target.value)}
           />
 
           <TextInput
             label="Customer Phone Number"
-            value={formData.presetName}
-            onChange={(e) => handleChange("presetName", e.target.value)}
+            value={formData.customerPhone}
+            onChange={(e) => handleChange("customerPhone", e.target.value)}
           />
 
 
           <TextInput
             label="Customer Address"
-            value={formData.presetName}
-            onChange={(e) => handleChange("presetName", e.target.value)}
+            value={formData.customerAddress}
+            onChange={(e) => handleChange("customerAddress", e.target.value)}
           />
 
         </div>
@@ -253,12 +261,12 @@ export default function ShopStandards() {
           onChange={(e) => handleChange("sidesMaterial", e.target.value)}
         />
 
-        <SelectInput
+        {/* <SelectInput
           label="Construction Method"
           options={["LamelloTenso-3mm Pilot Holes", "Method B"]}
           value={formData.constructionMethod}
           onChange={(e) => handleChange("constructionMethod", e.target.value)}
-        />
+        /> */}
 
         <SliderInput
           label="Top Drawer Front Height"

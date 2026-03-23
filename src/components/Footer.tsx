@@ -20,7 +20,7 @@ export function Footer() {
                 <img src={makramsLogo} alt="Makrams Logo" className="w-4 h-4" />
               </div>
               <span style={{ fontSize: "1.375rem", fontWeight: 700 }}>
-                <span className="text-[#22c55e]">Makrams</span>
+                <span className="text-[#22c55e]">Elite Kitchen Design</span>
               </span>
             </div>
             <p className="text-white/50 mb-6" style={{ fontSize: "0.9375rem", lineHeight: 1.7 }}>

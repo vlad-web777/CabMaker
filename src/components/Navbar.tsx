@@ -48,7 +48,8 @@ export function Navbar() {
   const auth = useAuth()
   
   const callApi = async () => {
-    const res = await fetch("https://d13ttutzue.execute-api.us-east-1.amazonaws.com/default/helloTest")
+    const helloAPI = import.meta.env.VITE_HELLO_API
+    const res = await fetch(helloAPI)
     const data = await res.json()
     alert(data)
   }
