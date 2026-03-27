@@ -40,7 +40,7 @@ const menuOptions = ["Base", "Upper", "Tall", "Base Corner"];
 
 function ProductsAdminSection() {
   const auth = useAuth();
-
+  const [showXmlHelp, setShowXmlHelp] = useState(false);
   const [imageSearch, setImageSearch] = useState("");
   const [showImageSuggestions, setShowImageSuggestions] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -745,8 +745,8 @@ function ProductsAdminSection() {
                           onDrop={handleDrop}
                           onClick={() => fileInputRef.current?.click()}
                           className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-6 text-center transition ${dragActive
-                              ? "border-black bg-gray-100"
-                              : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+                            ? "border-black bg-gray-100"
+                            : "border-gray-300 bg-gray-50 hover:bg-gray-100"
                             }`}
                         >
                           <div className="text-sm font-medium text-gray-700">
@@ -952,6 +952,48 @@ function ProductsAdminSection() {
                     </div>
                   </div>
                 </section>
+
+
+
+
+
+                <button
+                  type="button"
+                  onClick={() => setShowXmlHelp(true)}
+                  className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-black text-white text-2xl font-bold shadow-lg hover:bg-gray-800 transition"
+                  aria-label="XML Tag Help"
+                >
+                  ?
+                </button>
+
+
+
+
+
+                {showXmlHelp && (
+                  <div className="fixed inset-0 z-[60] flex items-end justify-end bg-green">
+                    <div className="relative mb-24 mr-6 w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border">
+                      <button
+                        type="button"
+                        onClick={() => setShowXmlHelp(false)}
+                        className="absolute top-3 right-3 bg-amber-50 text-gray-500 hover:text-black text-lg"
+                      >
+                        ×
+                      </button>
+
+                      <h3 className="text-lg font-semibold mb-3">XML Tag Help</h3>
+                      <p className="text-sm text-gray-700">
+                        xmlTag is the variable name used when exporting this option into the XML.
+                        Example tags: Width, Height, Depth, Material, FinishColor.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+
+
+
+
               </div>
             </div>
 
@@ -974,6 +1016,8 @@ function ProductsAdminSection() {
         </div>
       )}
     </div>
+
+
   );
 }
 

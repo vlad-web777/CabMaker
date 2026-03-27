@@ -147,7 +147,7 @@ export default function Account() {
         }
 
         const data = await response.json();
-        console.log("customers response:", data);
+        // console.log("customers response:", data);
         setCustomers(Array.isArray(data.customers) ? data.customers : []);
       } catch (err) {
         setCustomersError(err instanceof Error ? err.message : "Unknown error");

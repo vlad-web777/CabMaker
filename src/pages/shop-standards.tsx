@@ -15,7 +15,7 @@ const InfoBox: React.FC<InfoBoxProps> = ({ title, children }) => (
 
 type TextInputProps = {
   label: string;
-  value: string;
+  value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   readOnly?: boolean;
 };
@@ -143,6 +143,14 @@ type ShopStandardsFormData = {
   customerAddress: string;
   doorType: string;
   sidesMaterial: string;
+  baseCabinetHeight: number;
+  baseCabinetDepth: number;
+  topCabinetHeight: number;
+  topCabinetDepth: number;
+  tallCabinetHeight: number;
+  tallCabinetDepth: number;
+  kickHeight: number;
+  kickDepth: number;
   constructionMethod: string;
   shelfEdgeband: string;
   topDrawerHeight: number;
@@ -161,6 +169,14 @@ export default function ShopStandards() {
     customerAddress: "",
     doorType: "NOT Supplied",
     sidesMaterial: "Select Material",
+    baseCabinetHeight: 34.5,
+    baseCabinetDepth: 24,
+    topCabinetHeight: 42,
+    topCabinetDepth: 12,
+    tallCabinetHeight: 80,
+    tallCabinetDepth: 24,
+    kickHeight: 4,
+    kickDepth: 24,
     constructionMethod: "LamelloTenso-3mm Pilot Holes",
     shelfEdgeband: "Match Front",
     topDrawerHeight: 6,
@@ -189,6 +205,7 @@ export default function ShopStandards() {
     localStorage.setItem("shopStandards", JSON.stringify(formData));
     navigate("/builder");
   };
+
 
   return (
     <div className="max-w-4xl mx-auto px-6">
@@ -255,11 +272,65 @@ export default function ShopStandards() {
         />
 
         <SelectInput
-          label="Sides Material"
-          options={["Select Material", "Material A", "Material B"]}
+          label="Cabinet Material"
+          options={["Select Material", "3/4 Melamine", "3/4 Plywood"]}
           value={formData.sidesMaterial}
           onChange={(e) => handleChange("sidesMaterial", e.target.value)}
         />
+
+
+        <div className="flex justify-start gap-10">
+          <TextInput
+            label="Base Cabinet Height"
+            value={formData.baseCabinetHeight}
+            onChange={(e) => handleChange("baseCabinetHeight", Number(e.target.value))}
+          />
+          <TextInput
+            label="Base Cabinet Depth"
+            value={formData.baseCabinetDepth}
+            onChange={(e) => handleChange("baseCabinetDepth", Number(e.target.value))}
+          />
+        </div>
+
+        <div className="flex justify-start gap-10">
+          <TextInput
+            label="Top Cabinet Height"
+            value={formData.topCabinetHeight}
+            onChange={(e) => handleChange("topCabinetHeight", Number(e.target.value))}
+          />
+          <TextInput
+            label="Top Cabinet Depth"
+            value={formData.topCabinetDepth}
+            onChange={(e) => handleChange("topCabinetDepth", Number(e.target.value))}
+          />
+
+        </div>
+
+        <div className="flex justify-start gap-10">
+          <TextInput
+            label="Tall Cabinet Height"
+            value={formData.tallCabinetHeight}
+            onChange={(e) => handleChange("tallCabinetHeight", Number(e.target.value))}
+          />
+          <TextInput
+            label="Tall Cabinet Depth"
+            value={formData.tallCabinetDepth}
+            onChange={(e) => handleChange("tallCabinetDepth", Number(e.target.value))}
+          />
+        </div>
+
+        <div className="flex justify-start gap-10">
+          <TextInput
+            label="Kick Height"
+            value={formData.kickHeight}
+            onChange={(e) => handleChange("kickHeight", Number(e.target.value))}
+          />
+          <TextInput
+            label="Kick Depth"
+            value={formData.kickDepth}
+            onChange={(e) => handleChange("kickDepth", Number(e.target.value))}
+          />
+        </div>
 
         {/* <SelectInput
           label="Construction Method"
@@ -268,7 +339,7 @@ export default function ShopStandards() {
           onChange={(e) => handleChange("constructionMethod", e.target.value)}
         /> */}
 
-        <SliderInput
+        {/* <SliderInput
           label="Top Drawer Front Height"
           min={3}
           max={10}
@@ -276,7 +347,7 @@ export default function ShopStandards() {
           onChange={(e) =>
             handleChange("topDrawerHeight", Number(e.target.value))
           }
-        />
+        /> */}
 
         {/* <RadioGroup
           label="Drawer Style"

@@ -156,7 +156,7 @@ export const cabinetConfig: CabinetCategory[] = [
     menu: "Upper",
     cabinets: [
       {
-        id: "upper-3-drawer-cabinet",
+        id: "base-3-drawer-cabinet",
         name: "Upper 3 Drawer Cabinet",
         image: "/cabinets/upper-3-drawer.png",
         directory: "FRAMLESS",
