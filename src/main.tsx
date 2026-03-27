@@ -19,6 +19,7 @@ const cognitoAuthConfig = {
 
 createRoot(document.getElementById("root")!).render(
   <AuthProvider {...cognitoAuthConfig}>
+    {/* Test Pulling from repo */}
     <CartProvider>
       <App />
     </CartProvider>
