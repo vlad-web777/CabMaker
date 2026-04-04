@@ -635,6 +635,7 @@ const CabinetBuilder: React.FC = () => {
                     {option.type === "number" && (
                       <input
                         type="number"
+                        min={0}
                         placeholder={option.placeholder}
                         style={{
                           width: "100%",

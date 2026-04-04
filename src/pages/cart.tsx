@@ -1,3 +1,4 @@
+import { href, Route, useNavigate } from "react-router-dom"
 import { useCart } from "../context/CartContext"
 import { cabinetConfig } from "../models/cabinetConfig"
 import { generateKcdXml } from "../utils/generateKcdXml"
@@ -12,8 +13,8 @@ export default function CartPage() {
 
   const findCabinet = (id: string) => {
     for (const category of cabinetConfig) {
- //     const cab = category.cabinets.find(c => c.id === id)
-        const cab = category.cabinets.find(c => String(c.id) === String(id))
+      //     const cab = category.cabinets.find(c => c.id === id)
+      const cab = category.cabinets.find(c => String(c.id) === String(id))
       if (cab) return cab
     }
     return null
@@ -34,8 +35,14 @@ export default function CartPage() {
     URL.revokeObjectURL(url)
   }
 
+  const navigate = useNavigate();
   return (
+
     <div className="max-w-5xl mx-auto mt-24 px-6">
+      <button className="mb-4 px-5 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-md transition text-sm font-semibold" onClick={() => navigate("/builder")}>
+        Back to Selection
+      </button>
+
       <h1 className="text-2xl font-semibold mb-6">
         Your Cabinets
       </h1>

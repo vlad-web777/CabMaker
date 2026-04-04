@@ -1,15 +1,58 @@
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react";
 import makramsLogo from "../assets/makrams.png";
-
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 const footerLinks = {
   Products: ["Base Cabinets", "Wall Cabinets", "Tall Cabinets", "Corner Units"],
   Company: ["About Us", "Our Process", "Become a Dealer", "Careers"],
   Support: ["Contact Us", "Request a Quote", "Order Tracking", "FAQs", "Warranty Policy"],
   // Resources: ["Installation Guides", "Cabinet Care Tips", "Design Inspiration", "Blog", "Product Catalog"],
 };
+
+
 export function Footer() {
+
+  const [showButton, setShowButton] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setShowButton(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setShowButton(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  const navigate = useNavigate();
+
   return (
     <footer className="bg-[#0a0f1e] text-white">
+
+      {/* Invisible container */}
+      {/* <div className="fixed bottom-4 right-4 z-50 w-28 h-28 bg-amber-300"></div> */}
+
+      {/* {Vlad 3-30-2026:  fun button to get to the small game */}
+      {showButton && (
+        <button
+          onClick={() => navigate("/brick-breaker")}
+          className="fixed bottom-4 right-4 z-50 w-16 h-6 bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-lg"
+        >
+          Game!!!
+        </button>
+      )}
       {/* Main footer */}
       <div className="max-w-[1400px] mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
