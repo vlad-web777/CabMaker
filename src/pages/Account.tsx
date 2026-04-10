@@ -43,17 +43,122 @@ type PresetQuestion = {
 type PresetRecord = {
   presetId: string;
   userId: string;
-  ownerName: string;
+  ownerName?: string;
   name: string;
-  presetType: "shop-standards";
+  presetType: "shop-standards" | string;
   createdAt: string;
   updatedAt: string;
+
+  // saved preset values from backend
+  measurementUnit?: string;
+  projectName?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  doorType?: string;
+  sidesMaterial?: string;
+  baseCabinetHeight?: number;
+  baseCabinetDepth?: number;
+  topCabinetHeight?: number;
+  topCabinetDepth?: number;
+  tallCabinetHeight?: number;
+  tallCabinetDepth?: number;
+  kickHeight?: number;
+  kickDepth?: number;
+  constructionMethod?: string;
+  shelfEdgeband?: string;
+  topDrawerHeight?: number;
+  drawerStyle?: string;
+
   questions: PresetQuestion[];
 };
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString();
 }
+
+
+
+function toQuestion(
+  key: string,
+  label: string,
+  value: string | number | undefined | null
+): PresetQuestion {
+  return {
+    key,
+    label,
+    value: value === undefined || value === null ? "" : String(value),
+  };
+}
+
+function buildQuestionsFromPreset(preset: any): PresetQuestion[] {
+  if (Array.isArray(preset?.questions) && preset.questions.length > 0) {
+    return preset.questions.map((q: any) => ({
+      key: String(q.key ?? ""),
+      label: String(q.label ?? q.key ?? ""),
+      value: q.value === undefined || q.value === null ? "" : String(q.value),
+    }));
+  }
+
+  return [
+    toQuestion("measurementUnit", "Measurement Unit", preset.measurementUnit),
+    toQuestion("projectName", "Project Name", preset.projectName),
+    toQuestion("customerName", "Customer Name", preset.customerName),
+    toQuestion("customerPhone", "Customer Phone", preset.customerPhone),
+    toQuestion("customerAddress", "Customer Address", preset.customerAddress),
+    toQuestion("doorType", "Door / Fronts Type", preset.doorType),
+    toQuestion("sidesMaterial", "Cabinet Material", preset.sidesMaterial),
+    toQuestion("baseCabinetHeight", "Base Cabinet Height", preset.baseCabinetHeight),
+    toQuestion("baseCabinetDepth", "Base Cabinet Depth", preset.baseCabinetDepth),
+    toQuestion("topCabinetHeight", "Top Cabinet Height", preset.topCabinetHeight),
+    toQuestion("topCabinetDepth", "Top Cabinet Depth", preset.topCabinetDepth),
+    toQuestion("tallCabinetHeight", "Tall Cabinet Height", preset.tallCabinetHeight),
+    toQuestion("tallCabinetDepth", "Tall Cabinet Depth", preset.tallCabinetDepth),
+    toQuestion("kickHeight", "Kick Height", preset.kickHeight),
+    toQuestion("kickDepth", "Kick Depth", preset.kickDepth),
+    toQuestion("constructionMethod", "Construction Method", preset.constructionMethod),
+    toQuestion("shelfEdgeband", "Shelf Edgeband", preset.shelfEdgeband),
+    toQuestion("topDrawerHeight", "Top Drawer Height", preset.topDrawerHeight),
+    toQuestion("drawerStyle", "Drawer Style", preset.drawerStyle),
+  ].filter((q) => q.value !== "");
+}
+
+function normalizePreset(raw: any): PresetRecord {
+  return {
+    presetId: String(raw.presetId ?? ""),
+    userId: String(raw.userId ?? ""),
+    ownerName: raw.ownerName ?? "",
+    name: String(raw.name ?? ""),
+    presetType: String(raw.presetType ?? "shop-standards"),
+    createdAt: String(raw.createdAt ?? ""),
+    updatedAt: String(raw.updatedAt ?? ""),
+
+    measurementUnit: raw.measurementUnit,
+    projectName: raw.projectName,
+    customerName: raw.customerName,
+    customerPhone: raw.customerPhone,
+    customerAddress: raw.customerAddress,
+    doorType: raw.doorType,
+    sidesMaterial: raw.sidesMaterial,
+    baseCabinetHeight: raw.baseCabinetHeight,
+    baseCabinetDepth: raw.baseCabinetDepth,
+    topCabinetHeight: raw.topCabinetHeight,
+    topCabinetDepth: raw.topCabinetDepth,
+    tallCabinetHeight: raw.tallCabinetHeight,
+    tallCabinetDepth: raw.tallCabinetDepth,
+    kickHeight: raw.kickHeight,
+    kickDepth: raw.kickDepth,
+    constructionMethod: raw.constructionMethod,
+    shelfEdgeband: raw.shelfEdgeband,
+    topDrawerHeight: raw.topDrawerHeight,
+    drawerStyle: raw.drawerStyle,
+
+    questions: buildQuestionsFromPreset(raw),
+  };
+}
+
+
+
 
 export default function Account() {
   const auth = useAuth();
@@ -174,6 +279,10 @@ export default function Account() {
 
         const response = await fetch(url, {
           method: "GET",
+          headers: {
+            Authorization: `Bearer ${auth.user?.access_token}`,
+            "Content-Type": "application/json",
+          },
         });
 
         const text = await response.text();
@@ -183,7 +292,11 @@ export default function Account() {
         }
 
         const data = text ? JSON.parse(text) : {};
-        setPresets(Array.isArray(data.presets) ? data.presets : []);
+        setPresets(
+          Array.isArray(data.presets)
+            ? data.presets.map((preset: any) => normalizePreset(preset))
+            : []
+        );
       } catch (error) {
         console.error("loadPresets error:", error);
         setPresetsError(
@@ -368,7 +481,7 @@ export default function Account() {
                       </td>
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => setEditingPreset(preset)}
+                          onClick={() => setEditingPreset(normalizePreset(preset))}
                           className="text-green-600 hover:underline font-medium text-left"
                         >
                           {preset.name}
@@ -909,22 +1022,41 @@ export default function Account() {
                     Preset Questions
                   </div>
 
-                  <div className="p-4 space-y-4">
-                    {editingPreset.questions.map((question) => (
-                      <div key={question.key}>
-                        <label className="block text-sm font-medium mb-2">
-                          {question.label}
-                        </label>
-                        <input
-                          value={question.value}
-                          onChange={(e) =>
-                            updateEditingQuestion(question.key, e.target.value)
-                          }
-                          className="w-full border rounded px-3 py-2 text-sm"
-                        />
-                      </div>
-                    ))}
+
+
+                  <div className="border rounded">
+                    <div className="border-b px-4 py-3 bg-gray-50 font-semibold text-sm">
+                      Preset Questions
+                    </div>
+
+                    <div className="p-4 space-y-4">
+                      {editingPreset.questions.length === 0 ? (
+                        <div className="text-sm text-gray-500">
+                          No saved preset values found for this preset.
+                        </div>
+                      ) : (
+                        editingPreset.questions.map((question) => (
+                          <div key={question.key}>
+                            <label className="block text-sm font-medium mb-2">
+                              {question.label}
+                            </label>
+                            <input
+                              value={question.value}
+                              onChange={(e) =>
+                                updateEditingQuestion(question.key, e.target.value)
+                              }
+                              className="w-full border rounded px-3 py-2 text-sm"
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
+
+
+
+
+
                 </div>
               </div>
 

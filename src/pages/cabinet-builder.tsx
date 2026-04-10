@@ -9,6 +9,29 @@ type MenuConfig = {
   type: CabinetType;
   menu: string;
 };
+// Shop standards types
+type ShopStandards = {
+  measurementUnit: string;
+  presetName: string;
+  projectName: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  doorType: string;
+  sidesMaterial: string;
+  baseCabinetHeight: number;
+  baseCabinetDepth: number;
+  topCabinetHeight: number;
+  topCabinetDepth: number;
+  tallCabinetHeight: number;
+  tallCabinetDepth: number;
+  kickHeight: number;
+  kickDepth: number;
+  constructionMethod: string;
+  shelfEdgeband: string;
+  topDrawerHeight: number;
+  drawerStyle: string;
+};
 
 const cabinetMenus: MenuConfig[] = [
   { type: "frameless", menu: "Base" },
@@ -21,6 +44,8 @@ const cabinetMenus: MenuConfig[] = [
   { type: "framed", menu: "Tall" },
   { type: "framed", menu: "Base Corner" },
 ];
+
+
 
 /**
  * Cabinet Builder
@@ -66,6 +91,19 @@ const CabinetBuilder: React.FC = () => {
     {}
   );
   const [search, setSearch] = useState<string>("");
+  
+  // Vlad 3-3-2026: Load tje presets from localStorate
+  const [shopStandards, setShopStandards] = useState<ShopStandards | null>(null);
+  useEffect(() => {
+  const saved = localStorage.getItem("shopStandards");
+  if (saved) {
+    try {
+      setShopStandards(JSON.parse(saved));
+    } catch {
+      setShopStandards(null);
+    }
+  }
+}, []);
 
   /**
    * Keep active menu valid when type changes
