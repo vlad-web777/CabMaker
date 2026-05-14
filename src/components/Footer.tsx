@@ -2,6 +2,13 @@ import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react"
 import makramsLogo from "../assets/makrams.png";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {businessInfo} from "../types/businessInfo"
+
+const CompanyName = businessInfo.name
+const CompanyAddress = businessInfo.address
+const CompanyPhoneNumber = businessInfo.phone
+const CompanyEmail = businessInfo.email
+
 const footerLinks = {
   Products: ["Base Cabinets", "Wall Cabinets", "Tall Cabinets", "Corner Units"],
   Company: ["About Us", "Our Process", "Become a Dealer", "Careers"],
@@ -63,7 +70,7 @@ export function Footer() {
                 <img src={makramsLogo} alt="Makrams Logo" className="w-4 h-4" />
               </div>
               <span style={{ fontSize: "1.375rem", fontWeight: 700 }}>
-                <span className="text-[#22c55e]">Elite Kitchen Design</span>
+                <span className="text-[#22c55e]">{CompanyName}</span>
               </span>
             </div>
             <p className="text-white/50 mb-6" style={{ fontSize: "0.9375rem", lineHeight: 1.7 }}>
@@ -73,15 +80,15 @@ export function Footer() {
             <div className="flex flex-col gap-3 mb-6">
               <a href="tel:+15551234567" className="flex items-center gap-2 text-white/60 hover:text-[#22c55e] transition-colors" style={{ fontSize: "0.875rem" }}>
                 <Phone className="w-4 h-4 shrink-0" />
-                (239) 784-0494
+                {CompanyPhoneNumber}
               </a>
               <a href="mailto:hello@cabinetcraft.com" className="flex items-center gap-2 text-white/60 hover:text-[#22c55e] transition-colors" style={{ fontSize: "0.875rem" }}>
                 <Mail className="w-4 h-4 shrink-0" />
-                deniselite77@yahoo.com
+                {CompanyEmail}
               </a>
               <div className="flex items-start gap-2 text-white/60" style={{ fontSize: "0.875rem" }}>
                 <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                *<br />Nashville, Tn
+                {CompanyAddress}
               </div>
             </div>
             {/* Social */}
@@ -131,7 +138,7 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="max-w-[1400px] mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-white/40" style={{ fontSize: "0.8125rem" }}>
-            © 2026 Elite Kitchen Design. All rights reserved.
+            © 2026 {CompanyName}. All rights reserved.
           </p>
           <div className="flex items-center gap-5">
             {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (

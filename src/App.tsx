@@ -22,8 +22,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import APIErrorPage from "./pages/APIErrorPage";
 import Test from "./pages/test";
 import BrickBreakerPage from "./pages/BrickBreakerPage";
-
-// import CabinetSide from "./components/CabinetSide";
+import UserOrders from "./pages/UserOrders";
 
 function HomePage() {
   return (
@@ -70,6 +69,7 @@ export default function App() {
             <Route path="/APIErrorPage" element={<APIErrorPage />} />
             <Route path="/test" element={<Test/>}/> 
             <Route path="/brick-breaker" element={<BrickBreakerPage />} />
+            <Route path="/user-orders" element={<UserOrders/>} />
           </Routes>
         </main>
 

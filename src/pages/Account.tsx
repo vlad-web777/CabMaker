@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import ProductsAdmin from "../pages/ProductsAdmin";
+import { useNavigate } from "react-router-dom";
 
 type CustomerSection =
   | "overview"
@@ -179,9 +180,15 @@ export default function Account() {
 
   const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
   const [editingPreset, setEditingPreset] = useState<PresetRecord | null>(null);
-
+  // Vlad 4-18-2025: pull env for upodate API
+  const [savingPreset, setSavingPreset] = useState(false);
   const profile = auth.user?.profile;
 
+  const cognitoUsername =
+    typeof profile?.["cognito:username"] === "string"
+      ? profile["cognito:username"]
+      : "";
+      
   const groups = useMemo(() => {
     const rawGroups = profile?.["cognito:groups"];
     if (!rawGroups) return [];
@@ -196,7 +203,7 @@ export default function Account() {
     (typeof profile?.name === "string" && profile.name) ||
     (typeof profile?.email === "string" && profile.email) ||
     "User";
-
+  // console.log(userName)
   const userEmail =
     typeof profile?.email === "string" ? profile.email : "No email";
 
@@ -220,6 +227,8 @@ export default function Account() {
 
   const GET_CUSTOMERS_URL = import.meta.env.VITE_GET_CUSTOMERS;
   const GET_PRESETS_URL = import.meta.env.VITE_GET_PRESETS;
+  // Vlad 4-18-2025: pull env for upodate API
+  const UPDATE_PRESET_URL = import.meta.env.VITE_UPDATE_PRESET_URL;
 
   useEffect(() => {
     if (!auth.isAuthenticated || !isAdmin || !GET_CUSTOMERS_URL) return;
@@ -323,9 +332,14 @@ export default function Account() {
     )}`;
   };
 
+  const navigate = useNavigate();
+
   const placeholder = (name: string) => {
     window.alert(`${name} will be connected to backend next.`);
   };
+
+  // ,Waffle
+
 
   const togglePresetSelection = (presetId: string) => {
     setSelectedPresetIds((prev) =>
@@ -378,7 +392,7 @@ export default function Account() {
     });
   };
 
-  const savePresetEdits = () => {
+  const savePresetEdits = async () => {
     if (!editingPreset) return;
 
     const updatedPreset = {
@@ -386,13 +400,41 @@ export default function Account() {
       updatedAt: new Date().toISOString(),
     };
 
-    setPresets((prev) =>
-      prev.map((preset) =>
-        preset.presetId === updatedPreset.presetId ? updatedPreset : preset
-      )
-    );
+    try {
+      const response = await fetch(UPDATE_PRESET_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${auth.user?.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: updatedPreset.userId,
+          presetId: updatedPreset.presetId,
+          name: updatedPreset.name,
+          presetType: updatedPreset.presetType,
+          questions: updatedPreset.questions,
+          updatedAt: updatedPreset.updatedAt,
+        }),
+      });
 
-    setEditingPreset(null);
+      const text = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`Failed to update preset: ${response.status} ${text}`);
+      }
+
+      //  update UI only after backend success
+      setPresets((prev) =>
+        prev.map((preset) =>
+          preset.presetId === updatedPreset.presetId ? updatedPreset : preset
+        )
+      );
+
+      setEditingPreset(null);
+    } catch (error) {
+      console.error("Update failed:", error);
+      alert("Failed to update preset");
+    }
   };
 
   const renderPresetTable = (
@@ -445,8 +487,12 @@ export default function Account() {
           <div className="p-6 text-sm text-gray-600">{emptyText}</div>
         ) : (
           <div className="overflow-x-auto">
+
+
+
+            {/* VLad 4-11-2026: Filter by customer PResets */}
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
+              <thead className="bg-green-100 text-gray-600">
                 <tr>
                   <th className="text-left px-4 py-3 w-[50px]">
                     <input
@@ -503,6 +549,8 @@ export default function Account() {
                 })}
               </tbody>
             </table>
+
+
           </div>
         )}
       </div>
@@ -803,7 +851,9 @@ export default function Account() {
                           View all orders tied to this customer.
                         </p>
                         <button
-                          onClick={() => placeholder("Open customer orders")}
+                          // Vlad 4-18-2026: View Order Button Soup
+                          // onClick={() => placeholder("Open customer orders")}
+                          onClick={() => navigate("/user-orders")}
                           className="bg-green-500 text-white px-3 py-2 rounded text-sm"
                         >
                           View Orders
@@ -933,7 +983,7 @@ export default function Account() {
                       Filter by customer:
                     </div>
 
-                    <select
+                    {/* <select
                       value={selectedCustomerId}
                       onChange={(e) => setSelectedCustomerId(e.target.value)}
                       className="border rounded px-3 py-2 text-sm"
@@ -944,7 +994,10 @@ export default function Account() {
                           {customer.name}
                         </option>
                       ))}
-                    </select>
+                    </select> */}
+                    {/* VLad 4-11-2026: Filter by customer PResets */}
+                    <input className="border rounded px-3 py-2 text-sm" name="myInput" />
+
                   </div>
                 </div>
 
@@ -1189,6 +1242,9 @@ export default function Account() {
                 CONTACT INFORMATION
               </div>
               <div className="p-4 text-sm space-y-1">
+                <p>
+                  <strong>Business Name:</strong> {cognitoUsername}
+                </p>
                 <p>
                   <strong>Name:</strong> {userName}
                 </p>

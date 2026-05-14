@@ -1,4 +1,11 @@
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import {businessInfo} from "../../types/businessInfo"
+
+const CompanyName = businessInfo.name
+const CompanyAddress = businessInfo.address
+const CompanyPhoneNumber = businessInfo.phone
+const CompanyEmail = businessInfo.email
+
 
 export function ContactInfo() {
   return (
@@ -13,17 +20,17 @@ export function ContactInfo() {
 
           <div className="flex items-center gap-3">
             <Phone className="w-5 h-5 text-[#22c55e]" />
-            (239) 784-0494
+            {CompanyPhoneNumber}
           </div>
 
           <div className="flex items-center gap-3">
             <Mail className="w-5 h-5 text-[#22c55e]" />
-            deniselite77@yahoo.com
+            {CompanyEmail}
           </div>
 
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-[#22c55e]" />
-            Nashville, Tn
+            {CompanyAddress}
           </div>
 
         </div>

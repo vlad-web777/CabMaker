@@ -1,6 +1,6 @@
 import { href, Route, useNavigate } from "react-router-dom"
 import { useCart } from "../context/CartContext"
-import { cabinetConfig } from "../models/cabinetConfig"
+// import { cabinetConfig } from "../models/cabinetConfig"
 import { generateKcdXml } from "../utils/generateKcdXml"
 
 export default function CartPage() {
@@ -10,15 +10,19 @@ export default function CartPage() {
     updateQuantity,
     updateOptions
   } = useCart()
+  // const findCabinet = (id: string) => {
+  //   for (const category of cabinetConfig) {
+  //     //     const cab = category.cabinets.find(c => c.id === id)
+  //     const cab = category.cabinets.find(c => String(c.id) === String(id))
+  //     if (cab) return cab
+  //   }
+  //   return null
+  // }
 
   const findCabinet = (id: string) => {
-    for (const category of cabinetConfig) {
-      //     const cab = category.cabinets.find(c => c.id === id)
-      const cab = category.cabinets.find(c => String(c.id) === String(id))
-      if (cab) return cab
-    }
-    return null
-  }
+    return cart.find(item => String(item.id) === String(id)) ?? null;
+  };
+  // debugger;
 
   const handleSubmitQuote = () => {
     const xml = generateKcdXml(cart)
@@ -79,67 +83,25 @@ export default function CartPage() {
                     </h2>
 
                     <div className="grid grid-cols-3 gap-4 mb-4">
-                      {cabinet.options?.map((opt) => {
-                        const value = item.options?.[opt.label] ?? ""
+                      {Object.entries(item.options || {}).map(([key, value]) => (
+                        <div key={key}>
+                          <label className="text-sm text-gray-600">
+                            {key}
+                          </label>
 
-                        return (
-                          <div key={opt.label}>
-                            <label className="text-sm text-gray-600">
-                              {opt.label}
-                              {opt.required && (
-                                <span className="text-red-500 ml-1">*</span>
-                              )}
-                            </label>
-
-                            {opt.type === "select" && (
-                              <select
-                                className="w-full border rounded px-2 py-1 mt-1"
-                                value={value || opt.values?.[0] || ""}
-                                onChange={(e) =>
-                                  updateOptions(item.cartItemId, {
-                                    ...(item.options || {}),
-                                    [opt.label]: e.target.value
-                                  })
-                                }
-                              >
-                                {opt.values?.map((v) => (
-                                  <option key={v} value={v}>
-                                    {v}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-
-                            {opt.type === "input" && (
-                              <input
-                                type="text"
-                                className="w-full border rounded px-2 py-1 mt-1"
-                                value={value}
-                                onChange={(e) =>
-                                  updateOptions(item.cartItemId, {
-                                    ...(item.options || {}),
-                                    [opt.label]: e.target.value
-                                  })
-                                }
-                              />
-                            )}
-
-                            {opt.type === "number" && (
-                              <input
-                                type="number"
-                                className="w-full border rounded px-2 py-1 mt-1"
-                                value={value}
-                                onChange={(e) =>
-                                  updateOptions(item.cartItemId, {
-                                    ...(item.options || {}),
-                                    [opt.label]: e.target.value
-                                  })
-                                }
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
+                          <input
+                            type="text"
+                            className="w-full border rounded px-2 py-1 mt-1"
+                            value={String(value)}
+                            onChange={(e) =>
+                              updateOptions(item.cartItemId, {
+                                ...(item.options || {}),
+                                [key]: e.target.value
+                              })
+                            }
+                          />
+                        </div>
+                      ))}
                     </div>
 
                     <div className="flex items-center gap-6">

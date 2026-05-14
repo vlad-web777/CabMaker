@@ -658,17 +658,31 @@ function ProductsAdminSection() {
                         onChange={(e) => handleFieldChange("fileName", e.target.value)}
                       />
                     </div>
-
+                    {/* // Vlad 4-19-2026: make directory field with set options */}
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-600">
                         Directory
                       </label>
-                      <input
+                      {/* <input
                         className="w-full rounded-lg border px-3 py-2"
                         placeholder="FRAMELESS"
                         value={editingProduct.directory ?? ""}
                         onChange={(e) => handleFieldChange("directory", e.target.value)}
-                      />
+                      /> */}
+                      <select
+                        className="w-full rounded-lg border px-3 py-2"
+                        value={editingProduct.directory ?? "frameless"}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            "directory",
+                            e.target.value as "FRAMLESS" | "FRAME"
+                          )
+                        }
+                      >
+                        <option value="FRAMLESS">FRAMLESS</option>
+                        <option value="FRAME">FRAME</option>
+                      </select>
+
                     </div>
 
                     <div className="md:col-span-2">

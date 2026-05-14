@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "react-oidc-context"
 import ScrollToTop from "./ScrollToTop";
+import { businessInfo } from "../types/businessInfo";
 
-const CompanyName = "Elite Kitchen Design"
+const CompanyName = businessInfo.name
 
 const navLinks = [
   {

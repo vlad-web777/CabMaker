@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "react-oidc-context";
 
@@ -16,9 +16,11 @@ const InfoBox = ({ title, children }: InfoBoxProps) => (
 
 type TextInputProps = {
   label: string;
-  value: string | number;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+  onChange: (value: string) => void;
   readOnly?: boolean;
+  type?: "text" | "number";
+  placeholder?: string;
 };
 
 const TextInput = ({
@@ -26,14 +28,18 @@ const TextInput = ({
   value,
   onChange,
   readOnly = false,
+  type = "text",
+  placeholder,
 }: TextInputProps) => (
-  <div>
+  <div className="w-full">
     <label className="block text-sm font-medium mb-1">{label}</label>
     <input
-      type="text"
+      type={type}
       value={value}
-      onChange={onChange}
+      onChange={(e) => onChange(e.target.value)}
       readOnly={readOnly}
+      placeholder={placeholder}
+      step={type === "number" ? "any" : undefined}
       className="w-full border rounded-md px-3 py-2 text-sm"
     />
   </div>
@@ -43,32 +49,31 @@ type SelectInputProps = {
   label: string;
   options: string[];
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onChange: (value: string) => void;
 };
 
-const SelectInput = ({
-  label,
-  options,
-  value,
-  onChange,
-}: SelectInputProps) => (
-  <div>
+const SelectInput = ({ label, options, value, onChange }: SelectInputProps) => (
+  <div className="w-full">
     <label className="block text-sm font-medium mb-1">{label}</label>
     <select
       className="w-full border rounded-md px-3 py-2 text-sm"
       value={value}
-      onChange={onChange}
+      onChange={(e) => onChange(e.target.value)}
     >
-      {options.map((opt, i) => (
-        <option key={i} value={opt}>
-          {opt}
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
         </option>
       ))}
     </select>
   </div>
 );
 
-type RadioOption = { label: string; value: string };
+type RadioOption = {
+  label: string;
+  value: string;
+};
+
 type RadioGroupProps = {
   label: string;
   options: RadioOption[];
@@ -76,26 +81,26 @@ type RadioGroupProps = {
   onChange: (value: string) => void;
 };
 
-const RadioGroup: React.FC<RadioGroupProps> = ({
+const RadioGroup = ({
   label,
   options,
   selectedValue,
   onChange,
-}) => (
+}: RadioGroupProps) => (
   <div>
     <label className="block text-sm font-medium mb-1">{label}</label>
     <div className="flex gap-4 mt-1">
-      {options.map((opt, idx) => (
-        <label key={idx} className="flex items-center gap-1">
+      {options.map((option) => (
+        <label key={option.value} className="flex items-center gap-1 text-sm">
           <input
             type="radio"
             name={label}
-            value={opt.value}
-            checked={selectedValue === opt.value}
-            onChange={() => onChange(opt.value)}
+            value={option.value}
+            checked={selectedValue === option.value}
+            onChange={() => onChange(option.value)}
             className="accent-green-500"
           />
-          {opt.label}
+          {option.label}
         </label>
       ))}
     </div>
@@ -111,17 +116,17 @@ type ShopStandardsFormData = {
   customerAddress: string;
   doorType: string;
   sidesMaterial: string;
-  baseCabinetHeight: number;
-  baseCabinetDepth: number;
-  topCabinetHeight: number;
-  topCabinetDepth: number;
-  tallCabinetHeight: number;
-  tallCabinetDepth: number;
-  kickHeight: number;
-  kickDepth: number;
+  baseCabinetHeight: string;
+  baseCabinetDepth: string;
+  topCabinetHeight: string;
+  topCabinetDepth: string;
+  tallCabinetHeight: string;
+  tallCabinetDepth: string;
+  kickHeight: string;
+  kickDepth: string;
   constructionMethod: string;
   shelfEdgeband: string;
-  topDrawerHeight: number;
+  topDrawerHeight: string;
   drawerStyle: string;
 };
 
@@ -135,18 +140,63 @@ type PresetItem = {
   customerAddress?: string;
   doorType?: string;
   sidesMaterial?: string;
-  baseCabinetHeight?: number;
-  baseCabinetDepth?: number;
-  topCabinetHeight?: number;
-  topCabinetDepth?: number;
-  tallCabinetHeight?: number;
-  tallCabinetDepth?: number;
-  kickHeight?: number;
-  kickDepth?: number;
+  baseCabinetHeight?: number | string;
+  baseCabinetDepth?: number | string;
+  topCabinetHeight?: number | string;
+  topCabinetDepth?: number | string;
+  tallCabinetHeight?: number | string;
+  tallCabinetDepth?: number | string;
+  kickHeight?: number | string;
+  kickDepth?: number | string;
   constructionMethod?: string;
   shelfEdgeband?: string;
-  topDrawerHeight?: number;
+  topDrawerHeight?: number | string;
   drawerStyle?: string;
+};
+
+const initialFormData: ShopStandardsFormData = {
+  measurementUnit: "Imperial",
+  presetName: "",
+  projectName: "",
+  customerName: "",
+  customerPhone: "",
+  customerAddress: "",
+  doorType: "NOT Supplied",
+  sidesMaterial: "Select Material",
+  baseCabinetHeight: "34.5",
+  baseCabinetDepth: "24",
+  topCabinetHeight: "42",
+  topCabinetDepth: "12",
+  tallCabinetHeight: "80",
+  tallCabinetDepth: "24",
+  kickHeight: "4",
+  kickDepth: "24",
+  constructionMethod: "LamelloTenso-3mm Pilot Holes",
+  shelfEdgeband: "Match Front",
+  topDrawerHeight: "6",
+  drawerStyle: "Flat",
+};
+
+const numericFields = [
+  "baseCabinetHeight",
+  "baseCabinetDepth",
+  "topCabinetHeight",
+  "topCabinetDepth",
+  "tallCabinetHeight",
+  "tallCabinetDepth",
+  "kickHeight",
+  "kickDepth",
+  "topDrawerHeight",
+] as const;
+
+type NumericField = (typeof numericFields)[number];
+
+const toInputValue = (value: unknown, fallback = "") =>
+  value === undefined || value === null ? fallback : String(value);
+
+const toNumber = (value: string) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 export default function ShopStandards() {
@@ -156,52 +206,35 @@ export default function ShopStandards() {
   const SAVE_PRESET_URL = import.meta.env.VITE_SAVE_PRESET_URL;
   const GET_PRESETS_URL = import.meta.env.VITE_GET_PRESETS;
 
-  const initialFormData: ShopStandardsFormData = {
-    measurementUnit: "Imperial",
-    presetName: "",
-    projectName: "",
-    customerName: "",
-    customerPhone: "",
-    customerAddress: "",
-    doorType: "NOT Supplied",
-    sidesMaterial: "Select Material",
-    baseCabinetHeight: 34.5,
-    baseCabinetDepth: 24,
-    topCabinetHeight: 42,
-    topCabinetDepth: 12,
-    tallCabinetHeight: 80,
-    tallCabinetDepth: 24,
-    kickHeight: 4,
-    kickDepth: 24,
-    constructionMethod: "LamelloTenso-3mm Pilot Holes",
-    shelfEdgeband: "Match Front",
-    topDrawerHeight: 6,
-    drawerStyle: "Flat",
-  };
-
   const [formData, setFormData] = useState<ShopStandardsFormData>(initialFormData);
   const [presets, setPresets] = useState<PresetItem[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
 
+  const selectedPreset = useMemo(
+    () => presets.find((preset) => preset.presetId === selectedPresetId),
+    [presets, selectedPresetId]
+  );
+
   useEffect(() => {
     const saved = localStorage.getItem("shopStandards");
-    if (saved) {
-      try {
-        setFormData(JSON.parse(saved));
-      } catch (error) {
-        console.error("Failed to parse local shopStandards:", error);
-      }
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved) as Partial<ShopStandardsFormData>;
+      setFormData({ ...initialFormData, ...parsed });
+    } catch (error) {
+      console.error("Failed to parse local shopStandards:", error);
     }
   }, []);
 
   useEffect(() => {
     const loadPresets = async () => {
-      try {
-        const token = auth.user?.access_token;
-        if (!token || !GET_PRESETS_URL) return;
+      const token = auth.user?.access_token;
+      if (!token || !GET_PRESETS_URL) return;
 
+      try {
         setIsLoadingPresets(true);
 
         const response = await fetch(GET_PRESETS_URL, {
@@ -212,7 +245,6 @@ export default function ShopStandards() {
         });
 
         const data = await response.json();
-        console.log("getPresets response:", data);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load presets");
@@ -227,7 +259,7 @@ export default function ShopStandards() {
     };
 
     loadPresets();
-  }, [auth.user, GET_PRESETS_URL]);
+  }, [auth.user?.access_token, GET_PRESETS_URL]);
 
   const handleChange = <K extends keyof ShopStandardsFormData>(
     key: K,
@@ -247,17 +279,17 @@ export default function ShopStandards() {
       customerAddress: preset.customerAddress ?? "",
       doorType: preset.doorType ?? prev.doorType,
       sidesMaterial: preset.sidesMaterial ?? prev.sidesMaterial,
-      baseCabinetHeight: preset.baseCabinetHeight ?? prev.baseCabinetHeight,
-      baseCabinetDepth: preset.baseCabinetDepth ?? prev.baseCabinetDepth,
-      topCabinetHeight: preset.topCabinetHeight ?? prev.topCabinetHeight,
-      topCabinetDepth: preset.topCabinetDepth ?? prev.topCabinetDepth,
-      tallCabinetHeight: preset.tallCabinetHeight ?? prev.tallCabinetHeight,
-      tallCabinetDepth: preset.tallCabinetDepth ?? prev.tallCabinetDepth,
-      kickHeight: preset.kickHeight ?? prev.kickHeight,
-      kickDepth: preset.kickDepth ?? prev.kickDepth,
+      baseCabinetHeight: toInputValue(preset.baseCabinetHeight, prev.baseCabinetHeight),
+      baseCabinetDepth: toInputValue(preset.baseCabinetDepth, prev.baseCabinetDepth),
+      topCabinetHeight: toInputValue(preset.topCabinetHeight, prev.topCabinetHeight),
+      topCabinetDepth: toInputValue(preset.topCabinetDepth, prev.topCabinetDepth),
+      tallCabinetHeight: toInputValue(preset.tallCabinetHeight, prev.tallCabinetHeight),
+      tallCabinetDepth: toInputValue(preset.tallCabinetDepth, prev.tallCabinetDepth),
+      kickHeight: toInputValue(preset.kickHeight, prev.kickHeight),
+      kickDepth: toInputValue(preset.kickDepth, prev.kickDepth),
       constructionMethod: preset.constructionMethod ?? prev.constructionMethod,
       shelfEdgeband: preset.shelfEdgeband ?? prev.shelfEdgeband,
-      topDrawerHeight: preset.topDrawerHeight ?? prev.topDrawerHeight,
+      topDrawerHeight: toInputValue(preset.topDrawerHeight, prev.topDrawerHeight),
       drawerStyle: preset.drawerStyle ?? prev.drawerStyle,
     }));
   };
@@ -265,52 +297,61 @@ export default function ShopStandards() {
   const handlePresetSelect = (presetId: string) => {
     setSelectedPresetId(presetId);
 
-    const selected = presets.find((p) => p.presetId === presetId);
-    if (!selected) return;
+    if (!presetId) {
+      setFormData(initialFormData);
+      return;
+    }
 
-    applyPresetToForm(selected);
+    const selected = presets.find((preset) => preset.presetId === presetId);
+    if (selected) applyPresetToForm(selected);
+  };
+
+  const buildPayload = () => {
+    const payload = {
+      presetId: selectedPresetId || undefined,
+      name: formData.presetName.trim(),
+      presetType: "shop-standards",
+      measurementUnit: formData.measurementUnit,
+      projectName: formData.projectName,
+      customerName: formData.customerName,
+      customerPhone: formData.customerPhone,
+      customerAddress: formData.customerAddress,
+      doorType: formData.doorType,
+      sidesMaterial: formData.sidesMaterial,
+      constructionMethod: formData.constructionMethod,
+      shelfEdgeband: formData.shelfEdgeband,
+      drawerStyle: formData.drawerStyle,
+    } as Record<string, string | number | undefined>;
+
+    numericFields.forEach((field) => {
+      payload[field] = toNumber(formData[field]);
+    });
+
+    return payload;
   };
 
   const handleSubmit = async () => {
+    const token = auth.user?.access_token;
+
+    if (!token) {
+      alert("You must be logged in to save a preset.");
+      return;
+    }
+
+    if (!SAVE_PRESET_URL) {
+      alert("Missing VITE_SAVE_PRESET_URL");
+      return;
+    }
+
+    if (!formData.presetName.trim()) {
+      alert("Preset Name is required.");
+      return;
+    }
+
     try {
-      const token = auth.user?.access_token;
-
-      if (!token) {
-        alert("You must be logged in to save a preset.");
-        return;
-      }
-
-      if (!SAVE_PRESET_URL) {
-        alert("Missing VITE_SAVE_PRESET_URL");
-        return;
-      }
-
       setIsSaving(true);
 
-      const payload = {
-        presetId: selectedPresetId || undefined,
-        name: formData.presetName,
-        presetType: "shop-standards",
-        measurementUnit: formData.measurementUnit,
-        projectName: formData.projectName,
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerAddress: formData.customerAddress,
-        doorType: formData.doorType,
-        sidesMaterial: formData.sidesMaterial,
-        baseCabinetHeight: formData.baseCabinetHeight,
-        baseCabinetDepth: formData.baseCabinetDepth,
-        topCabinetHeight: formData.topCabinetHeight,
-        topCabinetDepth: formData.topCabinetDepth,
-        tallCabinetHeight: formData.tallCabinetHeight,
-        tallCabinetDepth: formData.tallCabinetDepth,
-        kickHeight: formData.kickHeight,
-        kickDepth: formData.kickDepth,
-        constructionMethod: formData.constructionMethod,
-        shelfEdgeband: formData.shelfEdgeband,
-        topDrawerHeight: formData.topDrawerHeight,
-        drawerStyle: formData.drawerStyle,
-      };
+      const payload = buildPayload();
 
       const response = await fetch(SAVE_PRESET_URL, {
         method: "POST",
@@ -322,7 +363,6 @@ export default function ShopStandards() {
       });
 
       const data = await response.json();
-      console.log("savePreset response:", data);
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save preset");
@@ -359,9 +399,10 @@ export default function ShopStandards() {
             className="w-full border rounded-md px-3 py-2 text-sm"
             value={selectedPresetId}
             onChange={(e) => handlePresetSelect(e.target.value)}
+            disabled={isLoadingPresets}
           >
             <option value="">
-              {isLoadingPresets ? "Loading presets..." : "Select a preset"}
+              {isLoadingPresets ? "Loading presets..." : "Start new preset"}
             </option>
             {presets.map((preset) => (
               <option key={preset.presetId} value={preset.presetId}>
@@ -369,6 +410,11 @@ export default function ShopStandards() {
               </option>
             ))}
           </select>
+          {selectedPreset && (
+            <p className="text-xs text-gray-500 mt-1">
+              Editing existing preset: {selectedPreset.name}
+            </p>
+          )}
         </div>
 
         <RadioGroup
@@ -378,117 +424,137 @@ export default function ShopStandards() {
             { label: "Metric", value: "Metric" },
           ]}
           selectedValue={formData.measurementUnit}
-          onChange={(v) => handleChange("measurementUnit", v)}
+          onChange={(value) => handleChange("measurementUnit", value)}
         />
 
         <TextInput
           label="Preset Name"
           value={formData.presetName}
-          onChange={(e) => handleChange("presetName", e.target.value)}
+          onChange={(value) => handleChange("presetName", value)}
         />
 
-        <div className="border rounded p-4">
+        <div className="border rounded p-4 space-y-4">
           <TextInput
             label="Project Name"
             value={formData.projectName}
-            onChange={(e) => handleChange("projectName", e.target.value)}
+            onChange={(value) => handleChange("projectName", value)}
           />
 
           <TextInput
             label="Customer Name"
             value={formData.customerName}
-            onChange={(e) => handleChange("customerName", e.target.value)}
+            onChange={(value) => handleChange("customerName", value)}
           />
 
           <TextInput
             label="Customer Phone Number"
             value={formData.customerPhone}
-            onChange={(e) => handleChange("customerPhone", e.target.value)}
+            onChange={(value) => handleChange("customerPhone", value)}
           />
 
           <TextInput
             label="Customer Address"
             value={formData.customerAddress}
-            onChange={(e) => handleChange("customerAddress", e.target.value)}
+            onChange={(value) => handleChange("customerAddress", value)}
           />
         </div>
 
-        <SelectInput
-          label="Door / Fronts Type"
-          options={["NOT Supplied", "Flat", "SFP"]}
-          value={formData.doorType}
-          onChange={(e) => handleChange("doorType", e.target.value)}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <SelectInput
+            label="Door / Fronts Type"
+            options={["NOT Supplied", "Flat", "SFP"]}
+            value={formData.doorType}
+            onChange={(value) => handleChange("doorType", value)}
+          />
 
-        <SelectInput
-          label="Cabinet Material"
-          options={["Select Material", "3/4 Melamine", "3/4 Plywood"]}
-          value={formData.sidesMaterial}
-          onChange={(e) => handleChange("sidesMaterial", e.target.value)}
-        />
+          <SelectInput
+            label="Cabinet Material"
+            options={["Select Material", "3/4 Melamine", "3/4 Plywood"]}
+            value={formData.sidesMaterial}
+            onChange={(value) => handleChange("sidesMaterial", value)}
+          />
+        </div>
 
-        <div className="flex justify-start gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <TextInput
             label="Base Cabinet Height"
+            type="number"
             value={formData.baseCabinetHeight}
-            onChange={(e) =>
-              handleChange("baseCabinetHeight", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("baseCabinetHeight", value)}
           />
           <TextInput
             label="Base Cabinet Depth"
+            type="number"
             value={formData.baseCabinetDepth}
-            onChange={(e) =>
-              handleChange("baseCabinetDepth", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("baseCabinetDepth", value)}
           />
-        </div>
 
-        <div className="flex justify-start gap-10">
           <TextInput
             label="Top Cabinet Height"
+            type="number"
             value={formData.topCabinetHeight}
-            onChange={(e) =>
-              handleChange("topCabinetHeight", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("topCabinetHeight", value)}
           />
           <TextInput
             label="Top Cabinet Depth"
+            type="number"
             value={formData.topCabinetDepth}
-            onChange={(e) =>
-              handleChange("topCabinetDepth", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("topCabinetDepth", value)}
           />
-        </div>
 
-        <div className="flex justify-start gap-10">
           <TextInput
             label="Tall Cabinet Height"
+            type="number"
             value={formData.tallCabinetHeight}
-            onChange={(e) =>
-              handleChange("tallCabinetHeight", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("tallCabinetHeight", value)}
           />
           <TextInput
             label="Tall Cabinet Depth"
+            type="number"
             value={formData.tallCabinetDepth}
-            onChange={(e) =>
-              handleChange("tallCabinetDepth", Number(e.target.value))
-            }
+            onChange={(value) => handleChange("tallCabinetDepth", value)}
           />
-        </div>
 
-        <div className="flex justify-start gap-10">
           <TextInput
             label="Kick Height"
+            type="number"
             value={formData.kickHeight}
-            onChange={(e) => handleChange("kickHeight", Number(e.target.value))}
+            onChange={(value) => handleChange("kickHeight", value)}
           />
           <TextInput
             label="Kick Depth"
+            type="number"
             value={formData.kickDepth}
-            onChange={(e) => handleChange("kickDepth", Number(e.target.value))}
+            onChange={(value) => handleChange("kickDepth", value)}
           />
+
+          <TextInput
+            label="Top Drawer Height"
+            type="number"
+            value={formData.topDrawerHeight}
+            onChange={(value) => handleChange("topDrawerHeight", value)}
+          />
+
+          <SelectInput
+            label="Drawer Style"
+            options={["Flat", "Shaker"]}
+            value={formData.drawerStyle}
+            onChange={(value) => handleChange("drawerStyle", value)}
+          />
+
+          {/* <SelectInput
+            label="Shelf Edgeband"
+            options={["Match Front", "None"]}
+            value={formData.shelfEdgeband}
+            onChange={(value) => handleChange("shelfEdgeband", value)}
+          />
+
+          <SelectInput
+            label="Construction Method"
+            options={["LamelloTenso-3mm Pilot Holes"]}
+            value={formData.constructionMethod}
+            onChange={(value) => handleChange("constructionMethod", value)}
+          /> */}
         </div>
       </div>
 

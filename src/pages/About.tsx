@@ -1,6 +1,11 @@
 import React from "react";
+import {businessInfo} from "../types/businessInfo"
 
-/*
+const CompanyName = businessInfo.name
+const CompanyAddress = businessInfo.address
+const CompanyPhoneNumber = businessInfo.phone
+const CompanyEmail = businessInfo.email/*
+
   Full About Us Page
   -----------------
   Contains:
@@ -10,14 +15,14 @@ import React from "react";
   - CTASection
   All modular and editable.
 */
-
+const titleAbout = `About ${CompanyName}`
 export default function About() {
   return (
     <div className="bg-gray-50 pt-[80px]">
 
       {/* Hero Section */}
       <HeroSection
-        title="About Kitchen Cabinet Design"
+        title={titleAbout}
         subtitle="Quality cabinetry crafted with precision and care"
         imageUrl="/images/about-hero.jpg"
       />
@@ -25,7 +30,7 @@ export default function About() {
       {/* Story Section */}
       <ContentSection
         title="Our Story"
-        content="We started Kitchen Cabinet Design with a vision to bring high-quality, customizable cabinetry to every home. Our team focuses on precision, design, and customer satisfaction. Replace this text with your real story."
+        content="We started our company with a vision to bring high-quality, customizable cabinetry to every home. Our team focuses on precision, design, and customer satisfaction. Replace this text with your real story."
         imageUrl="/images/about-story.jpg"
         imageLeft={true}
       />
