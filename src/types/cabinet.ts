@@ -36,6 +36,8 @@ export type Cabinet = {
   directory: string
   options?: CabinetOption[]
   menu?: string
+  // Add price as an option for cabinets
+  price?: number
 }
 
 export type CabinetCategory = {

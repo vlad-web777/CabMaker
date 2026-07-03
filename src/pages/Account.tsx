@@ -164,6 +164,7 @@ function normalizePreset(raw: any): PresetRecord {
 export default function Account() {
   const auth = useAuth();
 
+  debugger;
   const [customerSection, setCustomerSection] =
     useState<CustomerSection>("account");
   const [adminSection, setAdminSection] =

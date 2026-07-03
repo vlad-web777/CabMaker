@@ -154,6 +154,15 @@ type PresetItem = {
   drawerStyle?: string;
 };
 
+type ShopStandardsSession = {
+  formData: ShopStandardsFormData;
+  selectedPresetId?: string;
+  savedAt: number;
+};
+
+const SESSION_KEY = "shopStandardsSession";
+const SESSION_TIMEOUT_MS = 1000 * 60 * 60;
+
 const initialFormData: ShopStandardsFormData = {
   measurementUnit: "Imperial",
   presetName: "",
@@ -189,14 +198,17 @@ const numericFields = [
   "topDrawerHeight",
 ] as const;
 
-type NumericField = (typeof numericFields)[number];
-
 const toInputValue = (value: unknown, fallback = "") =>
   value === undefined || value === null ? fallback : String(value);
 
 const toNumber = (value: string) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getMinutesAgo = (savedAt: number) => {
+  const diff = Date.now() - savedAt;
+  return Math.max(0, Math.floor(diff / 1000 / 60));
 };
 
 export default function ShopStandards() {
@@ -212,22 +224,45 @@ export default function ShopStandards() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPresets, setIsLoadingPresets] = useState(false);
 
+  const [recentSession, setRecentSession] = useState<ShopStandardsSession | null>(null);
+  const [showSessionChoice, setShowSessionChoice] = useState(false);
+
   const selectedPreset = useMemo(
     () => presets.find((preset) => preset.presetId === selectedPresetId),
     [presets, selectedPresetId]
   );
 
   useEffect(() => {
-    const saved = localStorage.getItem("shopStandards");
-    if (!saved) return;
+    const savedSession = localStorage.getItem(SESSION_KEY);
+    if (!savedSession) return;
 
     try {
-      const parsed = JSON.parse(saved) as Partial<ShopStandardsFormData>;
-      setFormData({ ...initialFormData, ...parsed });
+      const parsed = JSON.parse(savedSession) as ShopStandardsSession;
+      const isRecent = Date.now() - parsed.savedAt < SESSION_TIMEOUT_MS;
+
+      if (isRecent) {
+        setRecentSession(parsed);
+        setShowSessionChoice(true);
+      } else {
+        localStorage.removeItem(SESSION_KEY);
+      }
     } catch (error) {
-      console.error("Failed to parse local shopStandards:", error);
+      console.error("Failed to parse shop standards session:", error);
+      localStorage.removeItem(SESSION_KEY);
     }
   }, []);
+
+  useEffect(() => {
+    if (showSessionChoice) return;
+
+    const session: ShopStandardsSession = {
+      formData,
+      selectedPresetId,
+      savedAt: Date.now(),
+    };
+
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }, [formData, selectedPresetId, showSessionChoice]);
 
   useEffect(() => {
     const loadPresets = async () => {
@@ -306,6 +341,32 @@ export default function ShopStandards() {
     if (selected) applyPresetToForm(selected);
   };
 
+  const handleContinueSession = () => {
+    if (!recentSession) return;
+
+    setFormData({
+      ...initialFormData,
+      ...recentSession.formData,
+    });
+
+    setSelectedPresetId(recentSession.selectedPresetId || "");
+    setShowSessionChoice(false);
+  };
+
+  const handleStartFresh = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setFormData(initialFormData);
+    setSelectedPresetId("");
+    setRecentSession(null);
+    setShowSessionChoice(false);
+  };
+
+  const handleLoadPresetInstead = () => {
+    setFormData(initialFormData);
+    setSelectedPresetId("");
+    setShowSessionChoice(false);
+  };
+
   const buildPayload = () => {
     const payload = {
       presetId: selectedPresetId || undefined,
@@ -368,7 +429,13 @@ export default function ShopStandards() {
         throw new Error(data?.message || "Failed to save preset");
       }
 
-      localStorage.setItem("shopStandards", JSON.stringify(formData));
+      const session: ShopStandardsSession = {
+        formData,
+        selectedPresetId: data?.presetId || selectedPresetId,
+        savedAt: Date.now(),
+      };
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
       navigate("/builder");
     } catch (error) {
       console.error("Save preset failed:", error);
@@ -377,6 +444,62 @@ export default function ShopStandards() {
       setIsSaving(false);
     }
   };
+
+  if (showSessionChoice && recentSession) {
+    const minutesAgo = getMinutesAgo(recentSession.savedAt);
+
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center">
+          <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-2xl">
+            ↻
+          </div>
+
+          <h1 className="text-2xl font-semibold mb-2">
+            Continue Previous Shop Standards?
+          </h1>
+
+          <p className="text-gray-600 mb-2">
+            You already started setting up shop standards for this session.
+          </p>
+
+          <p className="text-sm text-gray-500 mb-8">
+            Last updated {minutesAgo <= 1 ? "just now" : `${minutesAgo} minutes ago`}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              type="button"
+              onClick={handleContinueSession}
+              className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-5 py-4 font-semibold transition"
+            >
+              Continue Session
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLoadPresetInstead}
+              className="bg-gray-900 hover:bg-black text-white rounded-lg px-5 py-4 font-semibold transition"
+            >
+              Load Preset
+            </button>
+
+            <button
+              type="button"
+              onClick={handleStartFresh}
+              className="border border-gray-300 hover:bg-gray-50 rounded-lg px-5 py-4 font-semibold transition"
+            >
+              Start Fresh
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400 mt-6">
+            Sessions expire after 1 hour.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-6">
@@ -395,6 +518,7 @@ export default function ShopStandards() {
           <label className="block text-sm font-medium mb-1">
             Load Existing Preset
           </label>
+
           <select
             className="w-full border rounded-md px-3 py-2 text-sm"
             value={selectedPresetId}
@@ -404,12 +528,14 @@ export default function ShopStandards() {
             <option value="">
               {isLoadingPresets ? "Loading presets..." : "Start new preset"}
             </option>
+
             {presets.map((preset) => (
               <option key={preset.presetId} value={preset.presetId}>
                 {preset.name}
               </option>
             ))}
           </select>
+
           {selectedPreset && (
             <p className="text-xs text-gray-500 mt-1">
               Editing existing preset: {selectedPreset.name}
@@ -482,6 +608,7 @@ export default function ShopStandards() {
             value={formData.baseCabinetHeight}
             onChange={(value) => handleChange("baseCabinetHeight", value)}
           />
+
           <TextInput
             label="Base Cabinet Depth"
             type="number"
@@ -495,6 +622,7 @@ export default function ShopStandards() {
             value={formData.topCabinetHeight}
             onChange={(value) => handleChange("topCabinetHeight", value)}
           />
+
           <TextInput
             label="Top Cabinet Depth"
             type="number"
@@ -508,6 +636,7 @@ export default function ShopStandards() {
             value={formData.tallCabinetHeight}
             onChange={(value) => handleChange("tallCabinetHeight", value)}
           />
+
           <TextInput
             label="Tall Cabinet Depth"
             type="number"
@@ -521,6 +650,7 @@ export default function ShopStandards() {
             value={formData.kickHeight}
             onChange={(value) => handleChange("kickHeight", value)}
           />
+
           <TextInput
             label="Kick Depth"
             type="number"
@@ -541,20 +671,6 @@ export default function ShopStandards() {
             value={formData.drawerStyle}
             onChange={(value) => handleChange("drawerStyle", value)}
           />
-
-          {/* <SelectInput
-            label="Shelf Edgeband"
-            options={["Match Front", "None"]}
-            value={formData.shelfEdgeband}
-            onChange={(value) => handleChange("shelfEdgeband", value)}
-          />
-
-          <SelectInput
-            label="Construction Method"
-            options={["LamelloTenso-3mm Pilot Holes"]}
-            value={formData.constructionMethod}
-            onChange={(value) => handleChange("constructionMethod", value)}
-          /> */}
         </div>
       </div>
 

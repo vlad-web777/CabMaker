@@ -9,7 +9,7 @@ type MenuConfig = {
   type: CabinetType;
   menu: string;
 };
-// Shop standards types
+
 type ShopStandards = {
   measurementUnit: string;
   presetName: string;
@@ -19,19 +19,28 @@ type ShopStandards = {
   customerAddress: string;
   doorType: string;
   sidesMaterial: string;
-  baseCabinetHeight: number;
-  baseCabinetDepth: number;
-  topCabinetHeight: number;
-  topCabinetDepth: number;
-  tallCabinetHeight: number;
-  tallCabinetDepth: number;
-  kickHeight: number;
-  kickDepth: number;
+  baseCabinetHeight: number | string;
+  baseCabinetDepth: number | string;
+  topCabinetHeight: number | string;
+  topCabinetDepth: number | string;
+  tallCabinetHeight: number | string;
+  tallCabinetDepth: number | string;
+  kickHeight: number | string;
+  kickDepth: number | string;
   constructionMethod: string;
   shelfEdgeband: string;
-  topDrawerHeight: number;
+  topDrawerHeight: number | string;
   drawerStyle: string;
 };
+
+type ShopStandardsSession = {
+  formData: ShopStandards;
+  selectedPresetId?: string;
+  savedAt: number;
+};
+
+const SESSION_KEY = "shopStandardsSession";
+const SESSION_TIMEOUT_MS = 1000 * 60 * 60;
 
 const cabinetMenus: MenuConfig[] = [
   { type: "frameless", menu: "Base" },
@@ -45,18 +54,78 @@ const cabinetMenus: MenuConfig[] = [
   { type: "framed", menu: "Base Corner" },
 ];
 
+const getShopStandardValue = (
+  option: CabinetOption,
+  shopStandards: ShopStandards | null,
+  activeMenu: string
+) => {
+  if (!shopStandards) return undefined;
 
+  const label = option.label.toLowerCase();
 
-/**
- * Cabinet Builder
- *
- * Backend-driven version:
- * - cabinet data comes from API
- * - menu list stays local
- * - fetches when page opens / type changes
- * - search across all cabinets for selected type
- * - modal with required field validation
- */
+  if (label.includes("kick") && label.includes("height")) {
+    return shopStandards.kickHeight;
+  }
+
+  if (label.includes("kick") && label.includes("depth")) {
+    return shopStandards.kickDepth;
+  }
+
+  if (label.includes("height")) {
+    if (activeMenu === "Base" || activeMenu === "Base Corner") {
+      return shopStandards.baseCabinetHeight;
+    }
+
+    if (activeMenu === "Upper") {
+      return shopStandards.topCabinetHeight;
+    }
+
+    if (activeMenu === "Tall") {
+      return shopStandards.tallCabinetHeight;
+    }
+  }
+
+  if (label.includes("depth")) {
+    if (activeMenu === "Base" || activeMenu === "Base Corner") {
+      return shopStandards.baseCabinetDepth;
+    }
+
+    if (activeMenu === "Upper") {
+      return shopStandards.topCabinetDepth;
+    }
+
+    if (activeMenu === "Tall") {
+      return shopStandards.tallCabinetDepth;
+    }
+  }
+
+  if (label.includes("top drawer")) {
+    return shopStandards.topDrawerHeight;
+  }
+
+  if (label.includes("drawer style")) {
+    return shopStandards.drawerStyle;
+  }
+
+  if (label.includes("door") || label.includes("front")) {
+    return shopStandards.doorType;
+  }
+
+  if (label.includes("material")) {
+    return shopStandards.sidesMaterial;
+  }
+
+  if (label.includes("construction")) {
+    return shopStandards.constructionMethod;
+  }
+
+  if (label.includes("edgeband") || label.includes("edge band")) {
+    return shopStandards.shelfEdgeband;
+  }
+
+  return undefined;
+};
+
 const CabinetBuilder: React.FC = () => {
   const { addToCart } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,7 +147,6 @@ const CabinetBuilder: React.FC = () => {
     "";
 
   const [activeMenu, setActiveMenu] = useState<string>(safeInitialMenu);
-
   const [allCabinets, setAllCabinets] = useState<Cabinet[]>([]);
   const [loadingCabinets, setLoadingCabinets] = useState<boolean>(false);
   const [loadingError, setLoadingError] = useState<string>("");
@@ -90,26 +158,41 @@ const CabinetBuilder: React.FC = () => {
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>(
     {}
   );
+
   const [search, setSearch] = useState<string>("");
-  
-  // Vlad 3-3-2026: Load tje presets from localStorate
   const [shopStandards, setShopStandards] = useState<ShopStandards | null>(null);
+
   useEffect(() => {
-  const saved = localStorage.getItem("shopStandards");
-  if (saved) {
+    const savedSession = localStorage.getItem(SESSION_KEY);
+
+    if (!savedSession) {
+      setShopStandards(null);
+      return;
+    }
+
     try {
-      setShopStandards(JSON.parse(saved));
-    } catch {
+      const parsed = JSON.parse(savedSession) as ShopStandardsSession;
+      const isRecent = Date.now() - parsed.savedAt < SESSION_TIMEOUT_MS;
+
+      if (!isRecent) {
+        localStorage.removeItem(SESSION_KEY);
+        setShopStandards(null);
+        return;
+      }
+
+      setShopStandards(parsed.formData);
+    } catch (error) {
+      console.error("Failed to load shop standards session:", error);
+      localStorage.removeItem(SESSION_KEY);
       setShopStandards(null);
     }
-  }
-}, []);
+  }, []);
 
-  /**
-   * Keep active menu valid when type changes
-   */
   useEffect(() => {
-    const availableMenus = cabinetMenus.filter((item) => item.type === cabinetType);
+    const availableMenus = cabinetMenus.filter(
+      (item) => item.type === cabinetType
+    );
+
     const urlMenu = searchParams.get("menu") || "";
 
     const validMenu =
@@ -120,9 +203,6 @@ const CabinetBuilder: React.FC = () => {
     setActiveMenu(validMenu);
   }, [cabinetType, searchParams]);
 
-  /**
-   * Keep URL in sync
-   */
   useEffect(() => {
     if (!cabinetType || !activeMenu) return;
 
@@ -135,15 +215,6 @@ const CabinetBuilder: React.FC = () => {
     );
   }, [cabinetType, activeMenu, setSearchParams]);
 
-  /**
-   * Fetch cabinets when page opens / type changes
-   *
-   * Example backend endpoint:
-   * GET /api/cabinets?type=frameless
-   *
-   * Expected response:
-   * Cabinet[]
-   */
   useEffect(() => {
     let isMounted = true;
 
@@ -191,9 +262,6 @@ const CabinetBuilder: React.FC = () => {
     };
   }, [cabinetType]);
 
-  /**
-   * Lock background scroll while modal is open
-   */
   useEffect(() => {
     if (selectedCabinet) {
       document.body.style.overflow = "hidden";
@@ -206,15 +274,19 @@ const CabinetBuilder: React.FC = () => {
     };
   }, [selectedCabinet]);
 
-  /**
-   * Initialize option defaults when modal opens
-   */
   useEffect(() => {
     if (!selectedCabinet) return;
 
     const defaults: Record<string, string> = {};
 
     selectedCabinet.options?.forEach((opt) => {
+      const shopValue = getShopStandardValue(opt, shopStandards, activeMenu);
+
+      if (shopValue !== undefined && shopValue !== null && shopValue !== "") {
+        defaults[opt.label] = String(shopValue);
+        return;
+      }
+
       if (opt.defaultValue !== undefined) {
         defaults[opt.label] = String(opt.defaultValue);
         return;
@@ -229,7 +301,7 @@ const CabinetBuilder: React.FC = () => {
 
     setSelectedOptions(defaults);
     setTouchedFields({});
-  }, [selectedCabinet]);
+  }, [selectedCabinet, shopStandards, activeMenu]);
 
   const isFieldEmpty = (value: string | undefined) => {
     return !value || value.trim() === "";
@@ -305,13 +377,6 @@ const CabinetBuilder: React.FC = () => {
     closeModal();
   };
 
-  /**
-   * Search behavior:
-   * - no search => show only active menu
-   * - with search => search across all cabinets for selected type
-   *
-   * Assumes each cabinet returned by API has a `menu` property.
-   */
   const displayedCabinets = useMemo(() => {
     const term = search.trim().toLowerCase();
 
@@ -334,9 +399,6 @@ const CabinetBuilder: React.FC = () => {
 
   return (
     <>
-      {/* =========================
-          CABINET TYPE SWITCHER
-      ========================== */}
       <div
         style={{
           padding: "20px 30px",
@@ -372,11 +434,21 @@ const CabinetBuilder: React.FC = () => {
         >
           Framed
         </button>
+
+        {shopStandards && (
+          <div
+            style={{
+              marginTop: "10px",
+              fontSize: "14px",
+              fontWeight: 400,
+              color: "#2e7d32",
+            }}
+          >
+            Using shop standards: {shopStandards.presetName || "Current Session"}
+          </div>
+        )}
       </div>
 
-      {/* =========================
-          PAGE LAYOUT
-      ========================== */}
       <div
         style={{
           display: "grid",
@@ -385,7 +457,6 @@ const CabinetBuilder: React.FC = () => {
           padding: "0 30px",
         }}
       >
-        {/* Sidebar */}
         <div>
           {menusForType.map((item) => (
             <button
@@ -406,9 +477,7 @@ const CabinetBuilder: React.FC = () => {
           ))}
         </div>
 
-        {/* Main Content */}
         <div>
-          {/* Search */}
           <div style={{ marginBottom: "20px" }}>
             <input
               type="text"
@@ -424,7 +493,6 @@ const CabinetBuilder: React.FC = () => {
             />
           </div>
 
-          {/* Loading / Error */}
           {loadingCabinets && (
             <div
               style={{
@@ -451,7 +519,6 @@ const CabinetBuilder: React.FC = () => {
             </div>
           )}
 
-          {/* Empty state */}
           {!loadingCabinets && !loadingError && displayedCabinets.length === 0 && (
             <div
               style={{
@@ -465,7 +532,6 @@ const CabinetBuilder: React.FC = () => {
             </div>
           )}
 
-          {/* Cabinet Grid */}
           {!loadingCabinets && !loadingError && displayedCabinets.length > 0 && (
             <div
               style={{
@@ -494,6 +560,7 @@ const CabinetBuilder: React.FC = () => {
                       objectFit: "contain",
                     }}
                   />
+
                   <div
                     style={{
                       background: "#555",
@@ -523,9 +590,6 @@ const CabinetBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* =========================
-          CABINET MODAL
-      ========================== */}
       {selectedCabinet && (
         <div
           onClick={closeModal}
@@ -577,7 +641,6 @@ const CabinetBuilder: React.FC = () => {
               ✕
             </button>
 
-            {/* Left Side */}
             <div>
               <img
                 src={selectedCabinet.image}
@@ -590,9 +653,24 @@ const CabinetBuilder: React.FC = () => {
               />
             </div>
 
-            {/* Right Side */}
             <div>
-              <h2 style={{ marginBottom: "20px" }}>{selectedCabinet.name}</h2>
+              <h2 style={{ marginBottom: "8px" }}>{selectedCabinet.name}</h2>
+
+              {shopStandards && (
+                <div
+                  style={{
+                    marginBottom: "20px",
+                    padding: "8px 10px",
+                    background: "#e6f4ea",
+                    border: "1px solid #b7dfc1",
+                    borderRadius: "6px",
+                    color: "#2e7d32",
+                    fontSize: "13px",
+                  }}
+                >
+                  Defaults filled from current shop standards.
+                </div>
+              )}
 
               {visibleOptions.map((option) => {
                 const value = selectedOptions[option.label] || "";
@@ -623,7 +701,9 @@ const CabinetBuilder: React.FC = () => {
                         style={{
                           width: "100%",
                           padding: "8px",
-                          border: showError ? "1px solid #d32f2f" : "1px solid #ccc",
+                          border: showError
+                            ? "1px solid #d32f2f"
+                            : "1px solid #ccc",
                           borderRadius: "4px",
                           boxSizing: "border-box",
                         }}
@@ -653,7 +733,9 @@ const CabinetBuilder: React.FC = () => {
                         style={{
                           width: "100%",
                           padding: "8px",
-                          border: showError ? "1px solid #d32f2f" : "1px solid #ccc",
+                          border: showError
+                            ? "1px solid #d32f2f"
+                            : "1px solid #ccc",
                           borderRadius: "4px",
                           boxSizing: "border-box",
                         }}
@@ -678,7 +760,9 @@ const CabinetBuilder: React.FC = () => {
                         style={{
                           width: "100%",
                           padding: "8px",
-                          border: showError ? "1px solid #d32f2f" : "1px solid #ccc",
+                          border: showError
+                            ? "1px solid #d32f2f"
+                            : "1px solid #ccc",
                           borderRadius: "4px",
                           boxSizing: "border-box",
                         }}

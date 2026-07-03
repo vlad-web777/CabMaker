@@ -16,6 +16,9 @@ const CompanyEmail = businessInfo.email/*
   All modular and editable.
 */
 const titleAbout = `About ${CompanyName}`
+
+
+
 export default function About() {
   return (
     <div className="bg-gray-50 pt-[80px]">

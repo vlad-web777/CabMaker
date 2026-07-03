@@ -1,5 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "react-oidc-context";
+import Modal from "@mui/material/Modal";
+// import Box from "@mui/material/Box";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stack,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+  Box,
+} from "@mui/material";
 
 type ProductOption = {
   label: string;
@@ -36,9 +50,18 @@ const emptyProduct: ProductRecord = {
   options: [],
 };
 
+const response = await fetch("https://jb3ke4tp1l.execute-api.us-east-1.amazonaws.com/default/createS3FolderList");
+
+
+
+const folders = await response.json();
+
+// console.log(folders); 
 const menuOptions = ["Base", "Upper", "Tall", "Base Corner"];
 
 function ProductsAdminSection() {
+
+
   const auth = useAuth();
   const [showXmlHelp, setShowXmlHelp] = useState(false);
   const [imageSearch, setImageSearch] = useState("");
@@ -64,6 +87,73 @@ function ProductsAdminSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRecord>(emptyProduct);
+  //Vlad 5-23-2026: load image dropdown from lambda
+  const [s3Images, setS3Images] = useState<{ key: string; url: string }[]>([]);
+  const GET_CABINET_IMAGES_URL = import.meta.env.VITE_GET_CABINET_IMAGES;
+
+  const loadS3Images = async (type: "framed" | "frameless") => {
+    const response = await fetch(`${GET_CABINET_IMAGES_URL}?type=${type}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to load cabinet images");
+    }
+
+    const data = await response.json();
+    setS3Images(Array.isArray(data) ? data : []);
+  };
+
+
+  //Vlad 5-25-26: upload images to s3
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [cabinetType, setCabinetType] = useState<"frame" | "frameless">("frameless");
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+    setUploadModalOpen(true);
+  }
+
+  async function uploadImage() {
+    if (!selectedFile) return;
+
+    const res = await fetch(`${import.meta.env.VITE_GET_UPLOAD_URL}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+        cabinetType,
+      }),
+    });
+
+    const data = await res.json();
+
+    await fetch(data.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": selectedFile.type,
+      },
+      body: selectedFile,
+    });
+
+    alert("Image uploaded!");
+    setUploadModalOpen(false);
+  }
+
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    loadS3Images(editingProduct.cabinetType ?? "frameless");
+  }, [isModalOpen, editingProduct.cabinetType]);
 
   const getProductRowId = (product: ProductRecord) =>
     (product.id || product.cabinetKey || "").trim();
@@ -107,6 +197,8 @@ function ProductsAdminSection() {
     filteredProducts.every((product) =>
       selectedProductIds.includes(getProductRowId(product))
     );
+
+
 
   const loadProducts = async () => {
     try {
@@ -692,13 +784,14 @@ function ProductsAdminSection() {
 
                       <div className="space-y-3">
                         <div className="relative">
-                          <input
+
+                          {/* <input
                             className="w-full rounded-lg border px-3 py-2"
                             placeholder="Type image path or URL..."
                             value={imageSearch}
                             onChange={(e) => handleImageInputChange(e.target.value)}
                             onFocus={() => setShowImageSuggestions(true)}
-                          />
+                          /> */}
 
                           {showImageSuggestions && filteredImages.length > 0 && (
                             <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
@@ -729,7 +822,7 @@ function ProductsAdminSection() {
                         </div>
 
                         <div className="flex gap-3">
-                          <select
+                          {/* <select
                             className="w-full rounded-lg border px-3 py-2"
                             value=""
                             onChange={(e) => {
@@ -742,8 +835,23 @@ function ProductsAdminSection() {
                                 {img}
                               </option>
                             ))}
-                          </select>
+                          </select> */}
+                          {/* // Vlad 5-23-2026: replace existing images dropdown with s3 images from lambda */}
+                          <select
+                            className="w-full rounded-lg border px-3 py-2"
+                            value={editingProduct.image ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value) selectImage(e.target.value);
+                            }}
+                          >
+                            <option value="">Choose from S3 images</option>
 
+                            {s3Images.map((img) => (
+                              <option key={img.key} value={img.url}>
+                                {img.key.replace("cabinets/frame/", "").replace("cabinets/frameless/", "")}
+                              </option>
+                            ))}
+                          </select>
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -753,7 +861,8 @@ function ProductsAdminSection() {
                           </button>
                         </div>
 
-                        <div
+
+                        {/* <div
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
@@ -769,7 +878,68 @@ function ProductsAdminSection() {
                           <div className="mt-1 text-xs text-gray-500">
                             or click to browse
                           </div>
+                        </div> */}
+                        <div>
+
+                          <Dialog
+                            open={uploadModalOpen}
+                            onClose={() => setUploadModalOpen(false)}
+                            maxWidth="xs"
+                            fullWidth
+                          >
+                            <DialogTitle>Upload Cabinet Image</DialogTitle>
+
+                            <DialogContent>
+                              <Stack spacing={3} sx={{ mt: 1 }}>
+                                <Box
+                                  sx={{
+                                    border: "2px dashed #aaa",
+                                    borderRadius: 3,
+                                    p: 3,
+                                    textAlign: "center",
+                                    backgroundColor: "#fafafa",
+                                  }}
+                                >
+                                  <Typography sx={{ fontWeight: 600 }}>
+                                    {selectedFile?.name || "No file selected"}
+                                  </Typography>
+
+                                  <Typography variant="body2" color="text.secondary">
+                                    Choose where this image should be saved.
+                                  </Typography>
+                                </Box>
+
+                                <ToggleButtonGroup
+                                  value={cabinetType}
+                                  exclusive
+                                  fullWidth
+                                  onChange={(_, value) => {
+                                    if (value) setCabinetType(value);
+                                  }}
+                                >
+                                  <ToggleButton value="frame">Frame</ToggleButton>
+                                  <ToggleButton value="frameless">Frameless</ToggleButton>
+                                </ToggleButtonGroup>
+                              </Stack>
+                            </DialogContent>
+
+                            <DialogActions sx={{ px: 3, pb: 3 }}>
+                              <Button onClick={() => setUploadModalOpen(false)}>
+                                Cancel
+                              </Button>
+
+                              <Button
+                                variant="contained"
+                                onClick={uploadImage}
+                                disabled={!selectedFile}
+                              >
+                                Upload Image
+                              </Button>
+                            </DialogActions>
+                          </Dialog>
                         </div>
+
+
 
                         <input
                           ref={fileInputRef}
@@ -985,21 +1155,97 @@ function ProductsAdminSection() {
 
 
                 {showXmlHelp && (
-                  <div className="fixed inset-0 z-[60] flex items-end justify-end bg-green">
-                    <div className="relative mb-24 mr-6 w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border">
+                  <div className="fixed inset-0 z-[60] pointer-events-none">
+                    <div
+                      className="
+        pointer-events-auto
+        fixed bottom-24 right-6
+        w-[420px] h-[520px]
+        min-w-[320px] min-h-[300px]
+        max-w-[90vw] max-h-[85vh]
+        resize overflow-auto
+        rounded-2xl bg-white p-5 shadow-2xl border
+      "
+                    >
                       <button
                         type="button"
                         onClick={() => setShowXmlHelp(false)}
-                        className="absolute top-3 right-3 bg-amber-50 text-gray-500 hover:text-black text-lg"
+                        className="absolute top-3 right-3 text-gray-500 hover:text-black text-xl"
                       >
                         ×
                       </button>
 
-                      <h3 className="text-lg font-semibold mb-3">XML Tag Help</h3>
-                      <p className="text-sm text-gray-700">
-                        xmlTag is the variable name used when exporting this option into the XML.
-                        Example tags: Width, Height, Depth, Material, FinishColor.
+                      <h3 className="text-lg font-semibold mb-2">XML Tag Help</h3>
+
+                      <p className="text-sm text-gray-700 mb-4">
+                        <b>xmlTag</b> is the XML field name that this option will export to.
+                        It tells KCD which cabinet value, option, or setting this input controls.
                       </p>
+
+                      <div className="space-y-4 text-sm text-gray-700">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Basic cabinet dimensions</h4>
+                          <pre className="mt-2 rounded-lg bg-gray-100 p-3 text-xs overflow-auto">
+                            {`<Width>36</Width>
+<Height>34.5</Height>
+<Depth>24</Depth>
+<Location>0</Location>`}
+                          </pre>
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Common valid xmlTag values</h4>
+                          <ul className="list-disc pl-5 mt-2 space-y-1">
+                            <li><code>Width</code> — cabinet width</li>
+                            <li><code>Height</code> — cabinet height</li>
+                            <li><code>Depth</code> — cabinet depth</li>
+                            <li><code>Location</code> — position on wall</li>
+                            <li><code>OffFloor</code> — height from floor</li>
+                            <li><code>Hinge</code> — default hinging</li>
+                            <li><code>SetAllDoors</code> — door type for all doors</li>
+                            <li><code>SetAllDrawers</code> — door type for drawers</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Special syntax</h4>
+                          <pre className="mt-2 rounded-lg bg-gray-100 p-3 text-xs overflow-auto">
+                            {`I12        // sets I-number 12
+I30        // sets I-number 30
+OPTFinishedEnd
+PLTDoorStyle
+Hinge2
+SetDoor1
+SetDoor1-L
+SetDoor1-R`}
+                          </pre>
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Example option mapping</h4>
+                          <pre className="mt-2 rounded-lg bg-gray-100 p-3 text-xs overflow-auto">
+                            {`{
+                                label: "Cabinet Width",
+                                type: "number",
+                                xmlTag: "Width",
+                                required: true
+                                }
+
+                                {
+                                label: "Finished Left End",
+                                type: "select",
+                                xmlTag: "LFinish",
+                                values: ["0", "1", "2"]
+                                }`}
+                          </pre>
+                        </div>
+
+                        <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+                          Tip: XML tags should not include spaces. Use names like
+                          <code> Width</code>, <code>Depth</code>, <code>OPTFinishedEnd</code>,
+                          or <code>I12</code>.
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
